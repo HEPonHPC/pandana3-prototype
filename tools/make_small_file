@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+import h5py as h5
+from numpy.random import default_rng
+import numpy as np
+from math import pi
+
+
+rng = default_rng(seed=123)
+
+
+def make_electrons(outfile, n_electrons_per_event):
+    """Generate electron data for the specified number of electrons per event.
+
+    Write the data to the file 'outfile'.
+    """
+    n_events = len(n_electrons_per_event)
+    n_total = n_electrons_per_event.sum()
+    evtnum = np.repeat(np.arange(n_events), repeats=n_electrons_per_event)
+    idx = np.concatenate(([np.arange(i) for i in n_electrons_per_event]))
+    pt = rng.exponential(scale=30.0, size=n_total)
+    phi = rng.uniform(0.0, 2 * pi, size=n_total)
+    eta = rng.normal(0.0, 1.5, size=n_total)
+    vtx_x = rng.normal(0.0, 1e-3, size=n_total)
+    vtx_y = rng.normal(0.0, 1e-3, size=n_total)
+    vtx_z = rng.normal(0.0, 1.0, size=n_total)
+    outfile["electrons/evtnum"] = evtnum
+    outfile["electrons/idx"] = idx
+    outfile["electrons/pt"] = pt
+    outfile["electrons/phi"] = phi
+    outfile["electrons/eta"] = eta
+    outfile["electrons/x"] = vtx_x
+    outfile["electrons/y"] = vtx_y
+    outfile["electrons/z"] = vtx_z
+
+
+def make_events(outfile, n_events, n_electrons_per_event):
+    outfile["events/evtnum"] = np.arange(n_events)
+    outfile["events/nelectrons"] = n_electrons_per_event
+
+
+def make_file(outfile):
+    """Write an HDF5 file in the tidy-data format."""
+    n_events = 10
+    expected_electrons = 2.5
+    n_electrons_per_event = rng.poisson(lam=expected_electrons, size=n_events)
+    make_electrons(outfile, n_electrons_per_event)
+    make_events(outfile, n_events, n_electrons_per_event)
+
+
+if __name__ == "__main__":
+    with h5.File("small.h5", "w") as f:
+        make_file(f)
