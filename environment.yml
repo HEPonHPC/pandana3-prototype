@@ -1,0 +1,14 @@
+name: pandana-base
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pytest
+  - h5py[version='>=2.9',build=mpi*]
+  - black
+  - mpi4py
+  - numba
+  - pandas
+  - mypy
+  - pytest-cov
+prefix: /Users/paterno/anaconda3/envs/pandana-base
