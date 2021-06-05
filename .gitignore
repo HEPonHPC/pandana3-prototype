@@ -5,3 +5,7 @@ __pycache__/
 htmlcov/
 .coverage
 small.h5
+.Rhistory
+.pyre/
+.pyre_configuration
+.watchmanconfig

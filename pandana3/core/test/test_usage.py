@@ -17,3 +17,4 @@ with h5.File("small.h5", "r") as f:
 
     d2 = vertex.eval(f)
 
+# hard = pandana3.core.cut.SimpleCut(lambda pt: pt > 25.0)
