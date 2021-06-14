@@ -211,4 +211,48 @@ class GroupedVar(Var):
 
 
 class MutatedVar(Var):
-    pass
+    """A Mutated var applies a tranformation or mutation to another var.
+
+       # Compute event distance to origin
+       base = SimpleVar("electrons", ["x","y","z"])
+       pythagoras = lambda df: np.sqrt(df["x"]**2 + df["y"]**2 + df["z"]**2)
+       myvar = MutatedVarVar(base, pythagoras)
+
+       TODO: The mutation is currently required to take and return a dataframe.
+             What other call patterns should we support
+       TODO: The example function is tame, but actually returns a pd.Series. 
+             Do we want to require pd.DataFrame?
+    """
+    
+    def __init__(self, var, name, mutation):
+        self.var = var
+        self.name = name
+        self.mutate = mutation
+
+    def inq_datasets_read(self) -> List[str]:
+        return self.var.inq_datasets_read()
+
+    def inq_tables_read(self) -> List[str]:
+        return self.var.inq_tables_read()
+
+    def inq_result_columns(self) -> List[str]:
+        original_columns = self.var.inq_result_columns()
+        return original_columns + [self.name]
+
+    def inq_index(self):
+        return self.var.inq_index()
+
+    def inq_grouping(self) -> Grouping:
+        return self.var.inq_grouping()
+
+    def add_columns(self, column_names) -> None:
+        self.var.add_columns(column_names)
+
+    def eval(self, h5file):
+        temp = self.var.eval(h5file)
+
+        # TODO: Do we want to return the computed frame or append the result
+        # as a new column
+        # TODO: this assumes the mutation yields a Series.
+        temp[self.name] = self.mutate(temp)
+        return temp
