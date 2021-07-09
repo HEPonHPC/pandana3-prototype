@@ -93,17 +93,6 @@ class ConstantVar(Var):
         return self.value
 
 
-class ConstantVar(Var):
-    def __init__(self, name, value):
-        self.value = pd.DataFrame({name: value})
-
-    def inq_datasets_read(self):
-        return []
-
-    def eval(self, _):
-        return self.value
-
-
 class SimpleVar(Var):
     """A SimpleVar is a Var that is read directly from a file."""
 
