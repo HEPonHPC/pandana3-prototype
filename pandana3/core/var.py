@@ -202,17 +202,17 @@ class GroupedVar(Var):
 class MutatedVar(Var):
     """A Mutated var applies a tranformation or mutation to another var.
 
-       # Compute event distance to origin
-       base = SimpleVar("electrons", ["x","y","z"])
-       pythagoras = lambda df: np.sqrt(df["x"]**2 + df["y"]**2 + df["z"]**2)
-       myvar = MutatedVarVar(base, pythagoras)
+    # Compute event distance to origin
+    base = SimpleVar("electrons", ["x","y","z"])
+    pythagoras = lambda df: np.sqrt(df["x"]**2 + df["y"]**2 + df["z"]**2)
+    myvar = MutatedVarVar(base, pythagoras)
 
-       TODO: The mutation is currently required to take and return a dataframe.
-             What other call patterns should we support
-       TODO: The example function is tame, but actually returns a pd.Series. 
-             Do we want to require pd.DataFrame?
+    TODO: The mutation is currently required to take and return a dataframe.
+          What other call patterns should we support
+    TODO: The example function is tame, but actually returns a pd.Series.
+          Do we want to require pd.DataFrame?
     """
-    
+
     def __init__(self, var, name, mutation):
         self.var = var
         self.name = name

@@ -56,13 +56,16 @@ def test_grouped_var_basic():
         assert (d.keys() == ["evtnum", "pt"]).all()
         assert np.abs(d["pt"][2] - 82.386965) < 1.0e-3
 
+
 def test_mutated_var_basic():
-    base = SimpleVar("electrons", ["x","y","z"])
-    mutation = lambda df: np.sqrt(df["x"]**2 + df["y"]**2 + df["z"]**2)
+    base = SimpleVar("electrons", ["x", "y", "z"])
+    mutation = lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
     x = MutatedVar(base, "dist", mutation)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == set(["/electrons/x", "/electrons/y", "/electrons/z"])
+    assert set(x.inq_datasets_read()) == set(
+        ["/electrons/x", "/electrons/y", "/electrons/z"]
+    )
     assert set(x.inq_result_columns()) == set(["x", "y", "z", "dist"])
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
