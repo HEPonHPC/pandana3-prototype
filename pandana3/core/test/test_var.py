@@ -43,6 +43,31 @@ def test_simple_var_basic():
         assert (d.keys() == ["evtnum", "pt", "phi"]).all()
 
 
+def test_simple_var_construction():
+    try:
+        _ = SimpleVar(["electrons", "muons"], ["pt"])
+        assert False, "Failed to throw required exception"
+    except TypeError:
+        pass
+    except:
+        assert False, "threw the wrong kind of exception"
+    try:
+        _ = SimpleVar("electrons", "pt")
+        assert False, "Failed to throw required exception"
+    except TypeError:
+        pass
+    except:
+        assert False, "threw the wrong kind of exception"
+
+    try:
+        _ = SimpleVar("electrons", [])
+        assert False, "Failed to throw required exception"
+    except ValueError:
+        pass
+    except:
+        assert False, "threw the wrong kind of exception"
+
+
 def test_grouped_var_basic():
     base = SimpleVar("electrons", ["pt"])
     x = GroupedVar(base, ["evtnum"], np.sum)
@@ -55,6 +80,10 @@ def test_grouped_var_basic():
         assert len(d) == 9
         assert (d.keys() == ["evtnum", "pt"]).all()
         assert np.abs(d["pt"][2] - 82.386965) < 1.0e-3
+
+
+def test_grouped_var_duplicated_columns():
+    base = SimpleVar("electrons", ["pt"])
 
 
 def test_mutated_var_basic():

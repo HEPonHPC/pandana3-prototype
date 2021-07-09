@@ -102,6 +102,16 @@ class SimpleVar(Var):
         Invoke this like:
            myvar = SimpleVar("electrons", ["pt", "phi"])
         """
+        if not isinstance(table_name, str):
+            raise TypeError("table_name for SimpleVar must be a string")
+        if not isinstance(column_names, list):
+            raise TypeError(
+                "column_names for SimpleVar must be a nonempty list of strings"
+            )
+        if len(column_names) == 0:
+            raise ValueError(
+                "column_names for SimpleVar must be a nonempty list of strings"
+            )
         self.table = table_name
         self.columns = column_names
 
@@ -142,6 +152,10 @@ class SimpleVar(Var):
 
     def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
+        if not isinstance(column_names, list):
+            raise TypeError("column_names must be a nonempty list of strings")
+        if len(column_names) == 0:
+            raise ValueError("column_names must be a nonempty list of strings")
         self.columns.extend(column_names)
 
 
@@ -152,7 +166,7 @@ class GroupedVar(Var):
       # Get sum of pts of electrons in each event.
       base = SimpleVar("electrons", ["pt"])
       reduction = np.sum
-      myvar = GroupedVar(base = ["evtnum"], reduction)
+      myvar = GroupedVar(base, ["evtnum"], reduction)
 
     TODO: How do we get more than one column in a result? What is the equivalent
     of the tidyverse:
