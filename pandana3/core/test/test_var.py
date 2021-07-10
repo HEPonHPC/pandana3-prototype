@@ -1,10 +1,11 @@
+import pytest
 from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar
 import h5py as h5
 import pandas as pd
 import numpy as np
 
 
-class NoEvalVar(Var):
+class BadVar(Var):
     """This class is defective because it does not implement the required
     method `eval`."""
 
@@ -12,13 +13,9 @@ class NoEvalVar(Var):
 
 
 def test_var_subclass_requires_eval():
-    try:
-        _ = NoEvalVar()
-        assert False, "failed to throw required exception"
-    except TypeError:
-        pass
-    except:
-        assert False, "threw the wrong kind of exception"
+    """A Var subclass that does not implement the Var protocol should not be importable."""
+    with pytest.raises(TypeError):
+        _ = BadVar()
 
 
 def test_simple_var_basic():
@@ -43,29 +40,19 @@ def test_simple_var_basic():
         assert (d.keys() == ["evtnum", "pt", "phi"]).all()
 
 
-def test_simple_var_construction():
-    try:
+def test_simple_var_multiple_table_names():
+    with pytest.raises(TypeError):
         _ = SimpleVar(["electrons", "muons"], ["pt"])
-        assert False, "Failed to throw required exception"
-    except TypeError:
-        pass
-    except:
-        assert False, "threw the wrong kind of exception"
-    try:
-        _ = SimpleVar("electrons", "pt")
-        assert False, "Failed to throw required exception"
-    except TypeError:
-        pass
-    except:
-        assert False, "threw the wrong kind of exception"
 
-    try:
+
+def test_simple_var_column_names_not_list():
+    with pytest.raises(TypeError):
+        _ = SimpleVar("electrons", "pt")
+
+
+def test_simple_var_column_names_empy_list():
+    with pytest.raises(ValueError):
         _ = SimpleVar("electrons", [])
-        assert False, "Failed to throw required exception"
-    except ValueError:
-        pass
-    except:
-        assert False, "threw the wrong kind of exception"
 
 
 def test_grouped_var_basic():

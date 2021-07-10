@@ -5,7 +5,8 @@ from numpy.random import default_rng
 import numpy as np
 from math import pi
 
-
+# Note: changing this seed with result in a file that 
+# contains data other than those expected by the test suite.
 rng = default_rng(seed=123)
 
 
