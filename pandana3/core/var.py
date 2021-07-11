@@ -5,6 +5,12 @@ import pandas as pd
 from typing import List
 
 
+def verify_type(val, typ, msg):
+    """If 'val' is type of type 'typ', raise a TypeError with the given message"""
+    if not isinstance(val, typ):
+        raise TypeError(msg)
+
+
 class Var(ABC):
     """A Var is the basic representation of data in PandAna."""
 
@@ -102,16 +108,10 @@ class SimpleVar(Var):
         Invoke this like:
            myvar = SimpleVar("electrons", ["pt", "phi"])
         """
-        if not isinstance(table_name, str):
-            raise TypeError("table_name for SimpleVar must be a string")
-        if not isinstance(column_names, list):
-            raise TypeError(
-                "column_names for SimpleVar must be a nonempty list of strings"
-            )
+        verify_type(table_name, str, "table_name must be a string")
+        verify_type(column_names, list, "column_names must be a nonempy list of strings")
         if len(column_names) == 0:
-            raise ValueError(
-                "column_names for SimpleVar must be a nonempty list of strings"
-            )
+            raise ValueError("column_names must be a nonempty list of strings")
         self.table = table_name
         self.columns = column_names
 
