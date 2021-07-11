@@ -109,7 +109,9 @@ class SimpleVar(Var):
            myvar = SimpleVar("electrons", ["pt", "phi"])
         """
         verify_type(table_name, str, "table_name must be a string")
-        verify_type(column_names, list, "column_names must be a nonempy list of strings")
+        verify_type(
+            column_names, list, "column_names must be a nonempy list of strings"
+        )
         if len(column_names) == 0:
             raise ValueError("column_names must be a nonempty list of strings")
         self.table = table_name
