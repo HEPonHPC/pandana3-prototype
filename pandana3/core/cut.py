@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 class Cut(ABC):
     @abstractmethod
     def eval(self, h5file):
-    pass
+        pass
 
 
 class SimpleCut(Cut):
