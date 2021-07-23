@@ -62,6 +62,8 @@ def test_grouped_var_basic():
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
     assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/evtnum"}
+    #assert x.inq_index() == base.inq_index()
+
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
@@ -96,6 +98,11 @@ def test_filtered_var_basic():
     cut = SimpleCut(base, central)
     x = FilteredVar(base, cut)
     assert x is not None
+    assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/eta"}
+    assert len(x.inq_datasets_read()) == 2
+    assert x.inq_tables_read() == ["electrons"]
+    assert set(x.inq_result_columns()) == {"pt", "eta"}
+    assert x.inq_index() == cut.inq_index()
 
     var2 = base.filter_by(cut)
 

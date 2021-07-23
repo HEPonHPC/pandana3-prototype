@@ -276,15 +276,22 @@ class FilteredVar(Var):
 
     def inq_datasets_read(self):
         """Return the (full) names of the datasets to be read."""
+        all_datasets = self.base.inq_datasets_read() + self.cut.inq_datasets_read()
+        # We want to remove any duplicates from the list. Note that this does not preserve
+        # order; we should not care about the order.
+        return list(set(all_datasets))
 
     def inq_tables_read(self):
         """Return a list of tables read"""
-        pass
+        all_tables = self.base.inq_tables_read() + self.cut.inq_tables_read()
+        # We want to remove any duplicates from the list. Note that this does not preserve
+        # order; we should not care about the order.
+        return list(set(all_tables))
 
     def inq_result_columns(self):
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
-        pass
+        return self.base.inq_result_columns()
 
     def inq_index(self):
         """Return the Index to be used for this Var."""
