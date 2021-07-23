@@ -61,7 +61,7 @@ def test_grouped_var_basic():
     x = GroupedVar(base, ["evtnum"], np.sum)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == set(["/electrons/pt", "/electrons/evtnum"])
+    assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/evtnum"}
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
@@ -76,10 +76,8 @@ def test_mutated_var_basic():
     x = MutatedVar(base, "dist", mutation)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == set(
-        ["/electrons/x", "/electrons/y", "/electrons/z"]
-    )
-    assert set(x.inq_result_columns()) == set(["x", "y", "z", "dist"])
+    assert set(x.inq_datasets_read()) == {"/electrons/x", "/electrons/y", "/electrons/z"}
+    assert set(x.inq_result_columns()) == {"x", "y", "z", "dist"}
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
         print(d)
