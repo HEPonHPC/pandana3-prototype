@@ -1,8 +1,10 @@
 from .index import Index
 from pandana3.core.grouping import Grouping
+from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
 import pandas as pd
 from typing import List
+import h5py as h5
 
 
 def verify_type(val, typ, msg):
@@ -41,13 +43,18 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def eval(self, h5file):
+    def eval(self, h5file: h5.File):
         pass
 
     @abstractmethod
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
         pass
+
+    def filter_by(self, cut):
+        """Return a FilteredVar that uses self as a base, and applies
+        the given cut."""
+        return FilteredVar(self, cut)
 
 
 class ConstantVar(Var):
@@ -58,6 +65,7 @@ class ConstantVar(Var):
     def __init__(self, name: str, value):
         self.value = pd.DataFrame({name: value})
 
+    @abstractmethod
     def inq_datasets_read(self) -> List[str]:
         """Return the (full) names of the datasets to be read."""
         return []
@@ -84,19 +92,13 @@ class ConstantVar(Var):
         pass
 
     @abstractmethod
-    def eval(self, h5file):
-        pass
+    def eval(self, h5file: h5.File):
+        return self.value
 
     @abstractmethod
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
         pass
-
-    def inq_datasets_read(self):
-        return []
-
-    def eval(self, _):
-        return self.value
 
 
 class SimpleVar(Var):
@@ -141,7 +143,7 @@ class SimpleVar(Var):
         and so returns a Grouping that is fundamental."""
         return Grouping(column_names=None)
 
-    def eval(self, h5file):
+    def eval(self, h5file: h5.File):
         """Evaluate the Var by reading all the required data from the given
         h5.File object.
 
@@ -261,3 +263,44 @@ class MutatedVar(Var):
         # TODO: this assumes the mutation yields a Series.
         temp[self.name] = self.mutate(temp)
         return temp
+
+
+class FilteredVar(Var):
+    def __init__(self, base, cut: Cut):
+        assert isinstance(base, Var)
+        assert isinstance(cut, Cut)
+        self.base = base
+        self.cut = cut
+
+    """A FilteredVar is the result of applying a cut to another Var."""
+
+    def inq_datasets_read(self):
+        """Return the (full) names of the datasets to be read."""
+
+    def inq_tables_read(self):
+        """Return a list of tables read"""
+        pass
+
+    def inq_result_columns(self):
+        """Return the column names in the DataFrame that will be the result of
+        evaluation."""
+        pass
+
+    def inq_index(self):
+        """Return the Index to be used for this Var."""
+        pass
+
+    def inq_grouping(self):
+        """Return the Grouping used for this Var."""
+        pass
+
+    def eval(self, h5file: h5.File):
+        # TODO: Optimize this so that we don't evaluate
+        # the vars involved more than once each.
+        tmp = self.base.eval(h5file)
+        good = self.cut.eval(h5file)
+        return tmp[good]
+
+    def add_columns(self, column_names: List[str]):
+        """Add a new columns to be read."""
+        pass

@@ -1,5 +1,6 @@
 import pytest
-from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar
+from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
+from pandana3.core.cut import SimpleCut
 import h5py as h5
 import pandas as pd
 import numpy as np
@@ -69,10 +70,6 @@ def test_grouped_var_basic():
         assert np.abs(d["pt"][2] - 82.386965) < 1.0e-3
 
 
-def test_grouped_var_duplicated_columns():
-    base = SimpleVar("electrons", ["pt"])
-
-
 def test_mutated_var_basic():
     base = SimpleVar("electrons", ["x", "y", "z"])
     mutation = lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
@@ -89,3 +86,25 @@ def test_mutated_var_basic():
         assert isinstance(d, pd.DataFrame)
         assert (d.keys() == ["x", "y", "z", "dist"]).all()
         assert np.abs(d["dist"][2] - 0.750797) < 1.0e-3
+
+
+def test_filtered_var_basic():
+    base = SimpleVar("electrons", ["pt", "eta"])
+    central = lambda ele: np.abs(ele.eta) < 1.5
+    cut = SimpleCut(base, central)
+    x = FilteredVar(base, cut)
+    assert x is not None
+
+    var2 = base.filter_by(cut)
+
+    with h5.File("small.h5", "r") as f:
+        cut_df = x.eval(f)
+        assert isinstance(cut_df, pd.DataFrame)
+
+        cut_series = cut.eval(f)
+        base_df = base.eval(f)
+        cut_df2 = base_df[cut_series]
+        cut_df3 = var2.eval(f)
+
+        assert cut_df.equals(cut_df2)
+        assert cut_df.equals(cut_df3)
