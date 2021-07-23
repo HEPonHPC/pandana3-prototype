@@ -76,7 +76,11 @@ def test_mutated_var_basic():
     x = MutatedVar(base, "dist", mutation)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == {"/electrons/x", "/electrons/y", "/electrons/z"}
+    assert set(x.inq_datasets_read()) == {
+        "/electrons/x",
+        "/electrons/y",
+        "/electrons/z",
+    }
     assert set(x.inq_result_columns()) == {"x", "y", "z", "dist"}
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)

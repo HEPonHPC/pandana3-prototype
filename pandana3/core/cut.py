@@ -2,7 +2,6 @@ import h5py as h5
 from abc import ABC, abstractmethod
 
 
-
 class Cut(ABC):
     @abstractmethod
     def eval(self, h5file):
