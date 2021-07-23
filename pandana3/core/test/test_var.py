@@ -62,7 +62,7 @@ def test_grouped_var_basic():
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
     assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/evtnum"}
-    #assert x.inq_index() == base.inq_index()
+    # assert x.inq_index() == base.inq_index()
 
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)

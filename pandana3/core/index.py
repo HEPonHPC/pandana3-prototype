@@ -7,9 +7,11 @@ class Index:
 # what is the interface to be supported by the base class Index? Should Index
 # be an abstract class?
 
+
 class SimpleIndex(Index):
     def __init__(self, trivial=True):
         super(SimpleIndex, self).__init__(trivial)
+
 
 class MultiIndex(Index):
     def __init__(self, trivial=True):
