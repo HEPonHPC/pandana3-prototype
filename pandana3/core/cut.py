@@ -30,7 +30,11 @@ class SimpleCut(Cut):
         return self.base.inq_tables_read()
 
     def inq_index(self):
-        pass
+        """The index for a SimpleCut is not trivial. It has the same type as the
+        index for the underlying Var."""
+        idx = self.base.inq_index()
+        idx.is_trivial = False
+        return idx
 
     def eval(self, f: h5.File):
         """Return a bool series."""

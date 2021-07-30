@@ -1,11 +1,18 @@
+"""Module index defines the several types of Index required by
+pandana3.
+"""
+from pandana3.core.grouping import Grouping
+
+# TODO: What interface does Index need?
+
+
 class Index:
-    def __init__(self, trivial=True):
+    def __init__(self, trivial=True, grouping=Grouping()):
         self.is_trivial = trivial
+        self.grouping = grouping
 
-
-# TODO: Do we need SimpleIndex and MultiIndex? If so, how do they differ and
-# what is the interface to be supported by the base class Index? Should Index
-# be an abstract class?
+    def grouping():
+        return self.grouping
 
 
 class SimpleIndex(Index):
@@ -14,5 +21,12 @@ class SimpleIndex(Index):
 
 
 class MultiIndex(Index):
-    def __init__(self, trivial=True):
-        super(MultiIndex, self).__init__(trivial)
+    def __init__(self, trivial=True, grouping=Grouping()):
+        super(MultiIndex, self).__init__(trivial, grouping)
+
+
+def make_index(idx1, idx2):
+    is_trivial = idx1.is_trivial and idx2.is_trivial
+    if isinstance(idx1, SimpleIndex) and isinstance(idx2, SimpleIndex):
+        return SimpleIndex(is_trivial)
+    return MultiIndex(is_trivial, idx1.grouping.combine(idx2.grouping))

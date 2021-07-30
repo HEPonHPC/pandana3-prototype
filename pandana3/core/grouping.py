@@ -1,4 +1,5 @@
 from typing import Optional, List
+import copy
 
 
 class Grouping:
@@ -23,3 +24,22 @@ class Grouping:
     def is_trivial(self) -> bool:
         """A Grouping is trivial if each row is its own group."""
         return self.column_names is None
+
+    def combine(self, other: "Grouping") -> "Grouping":
+        if self.is_trivial():
+            return copy.deepcopy(other)
+        if other.is_trivial():
+            return copy.deepcopy(self)
+        my_column_names = set(self.column_names)
+        other_column_names = set(other.column_names)
+        if my_column_names <= other_column_names:
+            return copy.deepcopy(other)
+        if other_column_names < my_column_names:
+            return copy.deepcopy(self)
+        raise ValueError("Can not combine incompatible Groupings")
+
+    def __eq__(self, other: "Grouping") -> bool:
+        """Two Groupings are equal if they have the same column names."""
+        # TODO: this implementation cares about the order of the names.
+        # Should we instead *not* care about the order?
+        return self.column_names == other.column_names

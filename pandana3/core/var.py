@@ -1,5 +1,6 @@
-from .index import Index
 from pandana3.core.grouping import Grouping
+import pandana3.core.index as index
+from pandana3.core.index import SimpleIndex, MultiIndex
 from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -84,7 +85,7 @@ class ConstantVar(Var):
     @abstractmethod
     def inq_index(self):
         """Return the Index to be used for this Var."""
-        pass
+        return SimpleIndex()
 
     @abstractmethod
     def inq_grouping(self) -> Grouping:
@@ -135,8 +136,8 @@ class SimpleVar(Var):
 
     def inq_index(self):
         """Return the Index to be used for this Var. For a SimpleVar, this is
-        always a trivial index, because we're reading all the rows."""
-        return Index(trivial=True)
+        always a trivial SimpleIndex, because we're reading all the rows."""
+        return SimpleIndex()
 
     def inq_grouping(self):
         """Return the Grouping used for this Var. A SimpleVar is ungrouped,
@@ -295,7 +296,11 @@ class FilteredVar(Var):
 
     def inq_index(self):
         """Return the Index to be used for this Var."""
-        pass
+        cut_idx = self.cut.inq_index()
+        base_idx = self.base.inq_index()
+        return index.make_index(base_idx, cut_idx)
+
+        return index.make_index(self.cut.inq_index(), self.base.inq_index())
 
     def inq_grouping(self):
         """Return the Grouping used for this Var."""

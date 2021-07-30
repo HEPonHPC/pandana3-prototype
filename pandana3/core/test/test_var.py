@@ -1,6 +1,7 @@
 import pytest
 from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
 from pandana3.core.cut import SimpleCut
+from pandana3.core.index import SimpleIndex, MultiIndex
 import h5py as h5
 import pandas as pd
 import numpy as np
@@ -102,7 +103,10 @@ def test_filtered_var_basic():
     assert len(x.inq_datasets_read()) == 2
     assert x.inq_tables_read() == ["electrons"]
     assert set(x.inq_result_columns()) == {"pt", "eta"}
-    assert x.inq_index() == cut.inq_index()
+    idx = x.inq_index()
+    assert idx is not None
+    assert isinstance(idx, SimpleIndex)
+    assert not idx.is_trivial
 
     var2 = base.filter_by(cut)
 
