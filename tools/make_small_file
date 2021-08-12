@@ -1,54 +1,86 @@
 #!/usr/bin/env python
 
+from typing import MutableMapping
 import h5py as h5
 from numpy.random import default_rng
 import numpy as np
 from math import pi
 
-# Note: changing this seed with result in a file that 
-# contains data other than those expected by the test suite.
-rng = default_rng(seed=123)
+
+def make_eventum_array(multiplicities: np.ndarray) -> np.ndarray:
+    n_events = len(multiplicities)
+    return np.repeat(np.arange(n_events), repeats=multiplicities)
 
 
-def make_electrons(outfile, n_electrons_per_event):
-    """Generate electron data for the specified number of electrons per event.
+def make_index_array(multiplicities: np.ndarray) -> np.ndarray:
+    return np.concatenate(([np.arange(i) for i in multiplicities]))
 
-    Write the data to the file 'outfile'.
+
+def make_particles(
+    particle_name: str,
+    outfile: h5.File,
+    multiplicities: np.ndarray,
+    pt_scale: float,
+    eta_sd: float,
+    gen,
+) -> None:
+    """Generate standard particle data for the specified particle name,
+    and for the specified event multiplicities.and
+
+    Write the result to the open file 'outfile'.
     """
-    n_events = len(n_electrons_per_event)
-    n_total = n_electrons_per_event.sum()
-    evtnum = np.repeat(np.arange(n_events), repeats=n_electrons_per_event)
-    idx = np.concatenate(([np.arange(i) for i in n_electrons_per_event]))
-    pt = rng.exponential(scale=30.0, size=n_total)
-    phi = rng.uniform(0.0, 2 * pi, size=n_total)
-    eta = rng.normal(0.0, 1.5, size=n_total)
-    vtx_x = rng.normal(0.0, 1e-3, size=n_total)
-    vtx_y = rng.normal(0.0, 1e-3, size=n_total)
-    vtx_z = rng.normal(0.0, 1.0, size=n_total)
-    outfile["electrons/evtnum"] = evtnum
-    outfile["electrons/idx"] = idx
-    outfile["electrons/pt"] = pt
-    outfile["electrons/phi"] = phi
-    outfile["electrons/eta"] = eta
-    outfile["electrons/x"] = vtx_x
-    outfile["electrons/y"] = vtx_y
-    outfile["electrons/z"] = vtx_z
+    n_total = multiplicities.sum()
+    evtnum = make_eventum_array(multiplicities)
+    idx = make_index_array(multiplicities)
+    pt = gen.exponential(scale=pt_scale, size=n_total)
+    phi = gen.uniform(0.0, 2 * pi, size=n_total)
+    eta = gen.normal(0.0, eta_sd, size=n_total)
+    vtx_x = gen.normal(0.0, 1e-3, size=n_total)
+    vtx_y = gen.normal(0.0, 1e-3, size=n_total)
+    vtx_z = gen.normal(0.0, 1.0, size=n_total)
+    outfile[f"{particle_name}/evtnum"] = evtnum
+    outfile[f"{particle_name}/idx"] = idx
+    outfile[f"{particle_name}/pt"] = pt
+    outfile[f"{particle_name}/phi"] = phi
+    outfile[f"{particle_name}/eta"] = eta
+    outfile[f"{particle_name}/x"] = vtx_x
+    outfile[f"{particle_name}/y"] = vtx_y
+    outfile[f"{particle_name}/z"] = vtx_z
 
 
-def make_events(outfile, n_events, n_electrons_per_event):
+def make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, gen):
     outfile["events/evtnum"] = np.arange(n_events)
-    outfile["events/nelectrons"] = n_electrons_per_event
+    outfile["events/nelectrons"] = electron_multiplicities
+    outfile["events/nmuons"] = muon_multiplicities
+    outfile["events/met"] = gen.chisquare(5, n_events) * 10
 
 
-def make_file(outfile):
+def make_file(outfile, gen):
     """Write an HDF5 file in the tidy-data format."""
     n_events = 10
     expected_electrons = 2.5
-    n_electrons_per_event = rng.poisson(lam=expected_electrons, size=n_events)
-    make_electrons(outfile, n_electrons_per_event)
-    make_events(outfile, n_events, n_electrons_per_event)
+    expected_muons = 3.5
+    # Any new generation that makes use of random numbers should be inserted after
+    # any pre-existing generation, and before the final event table generation.
+    electron_multiplicities = gen.poisson(lam=expected_electrons, size=n_events)
+    make_particles("electrons", outfile, electron_multiplicities, 30.0, 1.5, gen)
+
+    muon_multiplicities = gen.poisson(lam=expected_muons, size=n_events)
+    make_particles("muons", outfile, muon_multiplicities, 50, 2.1, gen)
+
+    # We use a new generator with a new seed here to allow event generation to result in
+    # the same values across code modifications that add new tables above. Such changes
+    # will change the current state of 'gen', making it unsuitable for use here.
+    gen_for_events = default_rng(seed=713)
+    make_events(
+        outfile, n_events, electron_multiplicities, muon_multiplicities, gen_for_events
+    )
 
 
 if __name__ == "__main__":
+    # Note: changing this seed with result in a file that
+    # contains data other than those expected by the test suite.
+    rng = default_rng(seed=123)
+
     with h5.File("small.h5", "w") as f:
-        make_file(f)
+        make_file(f, rng)

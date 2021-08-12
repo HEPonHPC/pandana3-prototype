@@ -94,6 +94,8 @@ def test_mutated_var_basic():
 
 
 def test_filtered_var_basic():
+    """Test a FilteredVar that applies a cut to the same table from which
+    the cut was calculated."""
     base = SimpleVar("electrons", ["pt", "eta"])
     central = lambda ele: np.abs(ele.eta) < 1.5
     cut = SimpleCut(base, central)
@@ -121,3 +123,9 @@ def test_filtered_var_basic():
 
         assert cut_df.equals(cut_df2)
         assert cut_df.equals(cut_df3)
+
+
+def test_filtered_var_two():
+    """Test a FilteredVar that applies a cut to one table that was
+    calculated from another table."""
+    pass
