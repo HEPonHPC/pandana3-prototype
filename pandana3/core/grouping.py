@@ -15,17 +15,16 @@ class Grouping:
         if column_names is none, this is the flag that "all" columns are to be
         used, and each row is its own group. Such a Grouping is trivial.
         """
-        # TODO: Is it better to have self.columns always be a list? Then
-        # is_trivial would have to test for an empty list, but maybe other
-        # code would be simpler. Wait to see what use of Grouping looks like
-        # to decide if this change should be made
-        self.column_names = column_names
+        self.column_names = column_names if column_names is not None else []
 
     def is_trivial(self) -> bool:
         """A Grouping is trivial if each row is its own group."""
-        return self.column_names is None
+        return len(self.column_names) == 0
 
     def combine(self, other: "Grouping") -> "Grouping":
+        """Return a new Grouping that is the result of combining 'other'
+        with self.
+        """
         if self.is_trivial():
             return copy.deepcopy(other)
         if other.is_trivial():
@@ -38,7 +37,7 @@ class Grouping:
             return copy.deepcopy(self)
         raise ValueError("Can not combine incompatible Groupings")
 
-    def __eq__(self, other: "Grouping") -> bool:
+    def __eq__(self, other) -> bool:
         """Two Groupings are equal if they have the same column names."""
         # TODO: this implementation cares about the order of the names.
         # Should we instead *not* care about the order?
