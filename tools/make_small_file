@@ -48,11 +48,27 @@ def make_particles(
     outfile[f"{particle_name}/z"] = vtx_z
 
 
-def make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, gen):
+def make_events(
+    outfile, n_events, electron_multiplicities, muon_multiplicities, gen
+) -> None:
     outfile["events/evtnum"] = np.arange(n_events)
     outfile["events/nelectrons"] = electron_multiplicities
     outfile["events/nmuons"] = muon_multiplicities
     outfile["events/met"] = gen.chisquare(5, n_events) * 10
+
+
+def make_particle_qualities(
+    tablename: str, outfile: h5.File, multiplicities: np.ndarray, gen
+) -> None:
+    n_total = multiplicities.sum()
+    evtnum = make_eventum_array(multiplicities)
+    idx = make_index_array(multiplicities)
+    q1 = gen.uniform(0.0, 1.0, size=n_total)
+    q2 = gen.uniform(0.0, 1.0, size=n_total)
+    outfile[f"{tablename}/evtnum"] = evtnum
+    outfile[f"{tablename}/idx"] = idx
+    outfile[f"{tablename}/q1"] = q1
+    outfile[f"{tablename}/q2"] = q2
 
 
 def make_file(outfile):
@@ -60,8 +76,9 @@ def make_file(outfile):
     n_events = 10
     expected_electrons = 2.5
     expected_muons = 3.5
-    # Any new generation that makes use of random numbers should be inserted after
-    # any pre-existing generation, and before the final event table generation.
+    # Every table generated should have its own random number stream, seeded,
+    # for reproducibility.
+
     egen = default_rng(seed=123)
     electron_multiplicities = egen.poisson(lam=expected_electrons, size=n_events)
     make_particles("electrons", outfile, electron_multiplicities, 30.0, 1.5, egen)
@@ -72,10 +89,9 @@ def make_file(outfile):
 
     # Add another table with the same "electrons" grouping level, with new values
     # for each electron in each event.
+    eqgen = default_rng(seed=137)
+    make_particle_qualities("elequal", outfile, electron_multiplicities, eqgen)
 
-    # We use a new generator with a new seed here to allow event generation to result in
-    # the same values across code modifications that add new tables above. Such changes
-    # will change the current state of 'gen', making it unsuitable for use here.
     egen = default_rng(seed=713)
     make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, egen)
 
