@@ -4,7 +4,7 @@ from pandana3.core.index import SimpleIndex, MultiIndex
 from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import List
+from typing import List, Set
 import h5py as h5
 
 
@@ -49,7 +49,7 @@ class Var(ABC):
 
     @abstractmethod
     def add_columns(self, column_names: List[str]):
-        """Add a new columns to be read."""
+        """Add one or more new columns to be read."""
         pass
 
     def filter_by(self, cut):
@@ -99,7 +99,7 @@ class ConstantVar(Var):
     @abstractmethod
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
-        pass
+        raise TypeError("you can't add columns to a ConstVar")
 
 
 class SimpleVar(Var):
@@ -120,9 +120,9 @@ class SimpleVar(Var):
         self.table = table_name
         self.columns = column_names
 
-    def inq_datasets_read(self) -> List[str]:
+    def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        return [f"/{self.table}/{col_name}" for col_name in self.columns]
+        return {f"/{self.table}/{col_name}" for col_name in self.columns}
 
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read. For a SimpleVar, the length is always
@@ -161,7 +161,10 @@ class SimpleVar(Var):
             raise TypeError("column_names must be a nonempty list of strings")
         if len(column_names) == 0:
             raise ValueError("column_names must be a nonempty list of strings")
-        self.columns.extend(column_names)
+        # TODO: There must be a more efficient way to do this addition.
+        for name in column_names:
+            if not name in self.columns:
+                self.columns.append(name)
 
 
 class GroupedVar(Var):
@@ -214,7 +217,7 @@ class GroupedVar(Var):
         # TODO: Some aggregation functions are directly callable on the grouped dataframe.
         # We may want special handling for them.
 
-    def add_columns(self, column_names) -> None:
+    def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
 
@@ -237,7 +240,7 @@ class MutatedVar(Var):
         self.name = name
         self.mutate = mutation
 
-    def inq_datasets_read(self) -> List[str]:
+    def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
     def inq_tables_read(self) -> List[str]:
@@ -253,7 +256,7 @@ class MutatedVar(Var):
     def inq_grouping(self) -> Grouping:
         return self.var.inq_grouping()
 
-    def add_columns(self, column_names) -> None:
+    def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
     def eval(self, h5file):
@@ -275,12 +278,14 @@ class FilteredVar(Var):
 
     """A FilteredVar is the result of applying a cut to another Var."""
 
-    def inq_datasets_read(self):
+    def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        all_datasets = self.base.inq_datasets_read() + self.cut.inq_datasets_read()
+        all_datasets = set.union(
+            self.base.inq_datasets_read(), self.cut.inq_datasets_read()
+        )
         # We want to remove any duplicates from the list. Note that this does not preserve
         # order; we should not care about the order.
-        return list(set(all_datasets))
+        return set(all_datasets)
 
     def inq_tables_read(self):
         """Return a list of tables read"""
@@ -315,4 +320,4 @@ class FilteredVar(Var):
 
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
-        pass
+        raise NotImplementedError("We don't know how to add columns to a FilteredVar")

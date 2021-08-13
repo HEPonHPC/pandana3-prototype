@@ -23,15 +23,16 @@ def test_var_subclass_requires_eval():
 def test_simple_var_basic():
     x = SimpleVar("electrons", ["evtnum", "pt", "phi"])
     assert x is not None
+    assert isinstance(x, SimpleVar)
     assert x.table == "electrons"
     assert x.columns == ["evtnum", "pt", "phi"]
     assert x.inq_tables_read() == ["electrons"]
     assert x.inq_result_columns() == x.columns
-    assert x.inq_datasets_read() == [
+    assert x.inq_datasets_read() == {
         "/electrons/evtnum",
         "/electrons/pt",
         "/electrons/phi",
-    ]
+    }
     idx = x.inq_index()
     assert idx.is_trivial, "SimpleVar did not return a trivial Index"
 
@@ -62,7 +63,7 @@ def test_grouped_var_basic():
     x = GroupedVar(base, ["evtnum"], np.sum)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/evtnum"}
+    assert x.inq_datasets_read() == {"/electrons/pt", "/electrons/evtnum"}
     # assert x.inq_index() == base.inq_index()
 
     with h5.File("small.h5", "r") as f:
@@ -79,7 +80,7 @@ def test_mutated_var_basic():
     x = MutatedVar(base, "dist", mutation)
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_datasets_read()) == {
+    assert x.inq_datasets_read() == {
         "/electrons/x",
         "/electrons/y",
         "/electrons/z",
@@ -96,12 +97,14 @@ def test_mutated_var_basic():
 def test_filtered_var_basic():
     """Test a FilteredVar that applies a cut to the same table from which
     the cut was calculated."""
+    # TODO: Consider whether we should only be obtaining a 'pt' column in the
+    # dataframe that is returned by evaluting the FilteredVar.
     base = SimpleVar("electrons", ["pt", "eta"])
     central = lambda ele: np.abs(ele.eta) < 1.5
     cut = SimpleCut(base, central)
     x = FilteredVar(base, cut)
     assert x is not None
-    assert set(x.inq_datasets_read()) == {"/electrons/pt", "/electrons/eta"}
+    assert x.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
     assert len(x.inq_datasets_read()) == 2
     assert x.inq_tables_read() == ["electrons"]
     assert set(x.inq_result_columns()) == {"pt", "eta"}
@@ -128,4 +131,13 @@ def test_filtered_var_basic():
 def test_filtered_var_two():
     """Test a FilteredVar that applies a cut to one table that was
     calculated from another table."""
-    pass
+    # Make the 'base' Var for the Cut on electron quality.
+    # Make the Cut for the FilteredVar
+    # Make the 'base' Var for the FilteredVar: electron pt
+    # Make the FilteredVar
+    v1 = SimpleVar("elequal", ["q1"])
+    c = SimpleCut(v1, lambda q1: q1 > 0.75)
+    v2 = SimpleVar("electrons", ["pt"])
+    fv = FilteredVar(v2, c)
+    assert isinstance(fv, FilteredVar)
+    assert fv.inq_datasets_read() == {"/elequal/q1", "/electrons/pt"}
