@@ -76,7 +76,9 @@ def test_grouped_var_basic():
 
 def test_mutated_var_basic():
     base = SimpleVar("electrons", ["x", "y", "z"])
-    x = MutatedVar(base, "dist", lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2))
+    x = MutatedVar(
+        base, "dist", lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
+    )
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
     assert x.inq_datasets_read() == {
