@@ -44,7 +44,7 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def eval(self, h5file: h5.File):
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         pass
 
     @abstractmethod
@@ -93,7 +93,7 @@ class ConstantVar(Var):
         pass
 
     @abstractmethod
-    def eval(self, h5file: h5.File):
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         return self.value
 
     @abstractmethod
@@ -144,7 +144,7 @@ class SimpleVar(Var):
         and so returns a Grouping that is fundamental."""
         return Grouping(column_names=None)
 
-    def eval(self, h5file: h5.File):
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         """Evaluate the Var by reading all the required data from the given
         h5.File object.
 
@@ -207,7 +207,7 @@ class GroupedVar(Var):
     def inq_grouping(self) -> Grouping:
         return self.grouping
 
-    def eval(self, h5file):
+    def eval(self, h5file) -> pd.DataFrame:
         temp = self.var.eval(h5file)
         # TODO: Is it more efficient to have the resulting dataframe carry the index?
         # TODO: Is it better to sort, or not to sort? Our data comes already sorted.
@@ -259,7 +259,7 @@ class MutatedVar(Var):
     def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
-    def eval(self, h5file):
+    def eval(self, h5file) -> pd.DataFrame:
         temp = self.var.eval(h5file)
 
         # TODO: Do we want to return the computed frame or append the result
@@ -270,13 +270,13 @@ class MutatedVar(Var):
 
 
 class FilteredVar(Var):
+    """A FilteredVar is the result of applying a cut to another Var."""
+
     def __init__(self, base, cut: Cut):
         assert isinstance(base, Var)
         assert isinstance(cut, Cut)
         self.base = base
         self.cut = cut
-
-    """A FilteredVar is the result of applying a cut to another Var."""
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
@@ -311,7 +311,7 @@ class FilteredVar(Var):
         """Return the Grouping used for this Var."""
         pass
 
-    def eval(self, h5file: h5.File):
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         # TODO: Optimize this so that we don't evaluate
         # the vars involved more than once each.
         tmp = self.base.eval(h5file)
