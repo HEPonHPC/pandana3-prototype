@@ -11,7 +11,7 @@ class Index:
         self.is_trivial = trivial
         self.grouping = grouping
 
-    def grouping():
+    def grouping(self):
         return self.grouping
 
 
