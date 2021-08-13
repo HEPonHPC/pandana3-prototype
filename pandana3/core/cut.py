@@ -1,5 +1,6 @@
 import h5py as h5
 from abc import ABC, abstractmethod
+from typing import List, Set
 
 
 class Cut(ABC):
@@ -8,12 +9,12 @@ class Cut(ABC):
         pass
 
     @abstractmethod
-    def inq_datasets_read(self):
+    def inq_datasets_read(self) -> Set[str]:
         """Return the full names of the datasets that will be read by this cut."""
         pass
 
     @abstractmethod
-    def inq_tables_read(self):
+    def inq_tables_read(self) -> List[str]:
         """Return the names of tables that will be read by this cut."""
         pass
 
@@ -23,10 +24,10 @@ class SimpleCut(Cut):
         self.base = base
         self.predicate = predicate
 
-    def inq_datasets_read(self):
+    def inq_datasets_read(self) -> Set[str]:
         return self.base.inq_datasets_read()
 
-    def inq_tables_read(self):
+    def inq_tables_read(self) -> List[str]:
         return self.base.inq_tables_read()
 
     def inq_index(self):
