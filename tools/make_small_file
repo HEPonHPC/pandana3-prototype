@@ -55,32 +55,34 @@ def make_events(outfile, n_events, electron_multiplicities, muon_multiplicities,
     outfile["events/met"] = gen.chisquare(5, n_events) * 10
 
 
-def make_file(outfile, gen):
+def make_file(outfile):
     """Write an HDF5 file in the tidy-data format."""
     n_events = 10
     expected_electrons = 2.5
     expected_muons = 3.5
     # Any new generation that makes use of random numbers should be inserted after
     # any pre-existing generation, and before the final event table generation.
-    electron_multiplicities = gen.poisson(lam=expected_electrons, size=n_events)
-    make_particles("electrons", outfile, electron_multiplicities, 30.0, 1.5, gen)
+    egen = default_rng(seed=123)
+    electron_multiplicities = egen.poisson(lam=expected_electrons, size=n_events)
+    make_particles("electrons", outfile, electron_multiplicities, 30.0, 1.5, egen)
 
-    muon_multiplicities = gen.poisson(lam=expected_muons, size=n_events)
-    make_particles("muons", outfile, muon_multiplicities, 50, 2.1, gen)
+    mgen = default_rng(seed=1423)
+    muon_multiplicities = mgen.poisson(lam=expected_muons, size=n_events)
+    make_particles("muons", outfile, muon_multiplicities, 50, 2.1, mgen)
+
+    # Add another table with the same "electrons" grouping level, with new values
+    # for each electron in each event.
 
     # We use a new generator with a new seed here to allow event generation to result in
     # the same values across code modifications that add new tables above. Such changes
     # will change the current state of 'gen', making it unsuitable for use here.
-    gen_for_events = default_rng(seed=713)
-    make_events(
-        outfile, n_events, electron_multiplicities, muon_multiplicities, gen_for_events
-    )
+    egen = default_rng(seed=713)
+    make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, egen)
 
 
 if __name__ == "__main__":
     # Note: changing this seed with result in a file that
     # contains data other than those expected by the test suite.
-    rng = default_rng(seed=123)
 
     with h5.File("small.h5", "w") as f:
-        make_file(f, rng)
+        make_file(f)
