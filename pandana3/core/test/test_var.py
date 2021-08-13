@@ -1,7 +1,7 @@
 import pytest
 from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
 from pandana3.core.cut import SimpleCut
-from pandana3.core.index import SimpleIndex, MultiIndex
+from pandana3.core.index import SimpleIndex
 import h5py as h5
 import pandas as pd
 import numpy as np
@@ -76,8 +76,7 @@ def test_grouped_var_basic():
 
 def test_mutated_var_basic():
     base = SimpleVar("electrons", ["x", "y", "z"])
-    mutation = lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
-    x = MutatedVar(base, "dist", mutation)
+    x = MutatedVar(base, "dist", lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2))
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
     assert x.inq_datasets_read() == {
@@ -100,8 +99,7 @@ def test_filtered_var_basic():
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
     base = SimpleVar("electrons", ["pt", "eta"])
-    central = lambda ele: np.abs(ele.eta) < 1.5
-    cut = SimpleCut(base, central)
+    cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
     x = FilteredVar(base, cut)
     assert x is not None
     assert x.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
