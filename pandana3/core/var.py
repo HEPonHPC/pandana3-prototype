@@ -1,6 +1,6 @@
 from pandana3.core.grouping import Grouping
-import pandana3.core.index as index
-from pandana3.core.index import SimpleIndex, MultiIndex
+from pandana3.core import index
+from pandana3.core.index import Index, SimpleIndex, MultiIndex
 from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -9,13 +9,16 @@ import h5py as h5
 
 
 def verify_type(val, typ, msg):
-    """If 'val' is type of type 'typ', raise a TypeError with the given message"""
+    """If 'val' is not of type 'typ', raise a TypeError with the given message"""
     if not isinstance(val, typ):
         raise TypeError(msg)
 
 
 class Var(ABC):
-    """A Var is the basic representation of data in PandAna."""
+    """A Var is the basic representation of computation of data in PandAna.
+
+    A Var is not, nor does it contain, a DataFrame. However, when given a file,
+    it can be evaluated to yield a DataFrame."""
 
     @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
@@ -34,7 +37,7 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def inq_index(self):
+    def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
         pass
 
