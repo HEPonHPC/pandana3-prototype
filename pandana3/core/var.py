@@ -18,17 +18,17 @@ class Var(ABC):
     """A Var is the basic representation of data in PandAna."""
 
     @abstractmethod
-    def inq_datasets_read(self):
+    def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         pass
 
     @abstractmethod
-    def inq_tables_read(self):
+    def inq_tables_read(self) -> List[str]:
         """Return a list of tables read"""
         pass
 
     @abstractmethod
-    def inq_result_columns(self):
+    def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
         pass
@@ -39,7 +39,7 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def inq_grouping(self):
+    def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
         pass
 
@@ -67,9 +67,9 @@ class ConstantVar(Var):
         self.value = pd.DataFrame({name: value})
 
     @abstractmethod
-    def inq_datasets_read(self) -> List[str]:
+    def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        return []
+        return set()
 
     @abstractmethod
     def inq_tables_read(self) -> List[str]:
@@ -151,9 +151,9 @@ class SimpleVar(Var):
         In this first version, we have no limitation on the rows read; this
         always reads all rows."""
         assert h5file, "Attempt to evaluate a Var with a non-open File"
-        dsets = [h5file[name] for name in self.inq_datasets_read()]
-        data = {name: vals for (name, vals) in zip(self.columns, dsets)}
-        return pd.DataFrame(data)
+        data = {name: h5file[f"/{self.table}/{name}"] for name in self.columns}
+        result = pd.DataFrame(data)
+        return result
 
     def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
@@ -192,7 +192,7 @@ class GroupedVar(Var):
         self.grouping = Grouping(grouping)
         self.reduction = reduction
 
-    def inq_datasets_read(self) -> List[str]:
+    def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
     def inq_tables_read(self) -> List[str]:

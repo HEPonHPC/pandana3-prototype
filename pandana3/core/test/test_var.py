@@ -40,7 +40,7 @@ def test_simple_var_basic():
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
         assert len(d) == 29
-        assert (d.keys() == ["evtnum", "pt", "phi"]).all()
+        assert list(d.columns) == ["evtnum", "pt", "phi"]
 
 
 def test_simple_var_multiple_table_names():
@@ -70,7 +70,7 @@ def test_grouped_var_basic():
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
         assert len(d) == 9
-        assert (d.keys() == ["evtnum", "pt"]).all()
+        assert list(d.columns) == ["evtnum", "pt"]
         assert np.abs(d["pt"][2] - 82.386965) < 1.0e-3
 
 
@@ -89,9 +89,8 @@ def test_mutated_var_basic():
     assert set(x.inq_result_columns()) == {"x", "y", "z", "dist"}
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
-        print(d)
         assert isinstance(d, pd.DataFrame)
-        assert (d.keys() == ["x", "y", "z", "dist"]).all()
+        assert list(d.columns) == ["x", "y", "z", "dist"]
         assert np.abs(d["dist"][2] - 0.750797) < 1.0e-3
 
 
