@@ -135,8 +135,14 @@ def test_filtered_var_two():
     # Make the 'base' Var for the FilteredVar: electron pt
     # Make the FilteredVar
     v1 = SimpleVar("elequal", ["q1"])
-    c = SimpleCut(v1, lambda q1: q1 > 0.75)
+    good = SimpleCut(v1, lambda q1: q1 > 0.75)
     v2 = SimpleVar("electrons", ["pt"])
-    fv = FilteredVar(v2, c)
-    assert isinstance(fv, FilteredVar)
-    assert fv.inq_datasets_read() == {"/elequal/q1", "/electrons/pt"}
+    good_electrons = FilteredVar(v2, good)
+    assert isinstance(good_electrons, FilteredVar)
+    assert good_electrons.inq_datasets_read() == {"/elequal/q1", "/electrons/pt"}
+    assert good_electrons.inq_result_columns() == ["pt"]
+
+    with h5.File("small.h5", "r") as f:
+        df = good_electrons.eval(f)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 9  # there are 9 good electrons

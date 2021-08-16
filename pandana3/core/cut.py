@@ -1,11 +1,12 @@
 import h5py as h5
+import pandas as pd
 from abc import ABC, abstractmethod
 from typing import List, Set
 
 
 class Cut(ABC):
     @abstractmethod
-    def eval(self, h5file):
+    def eval(self, f: h5.File):
         pass
 
     @abstractmethod
@@ -37,7 +38,7 @@ class SimpleCut(Cut):
         idx.is_trivial = False
         return idx
 
-    def eval(self, f: h5.File):
+    def eval(self, f: h5.File) -> pd.Series:
         """Return a bool series."""
         full = self.base.eval(f)
         return self.predicate(full)
