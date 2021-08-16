@@ -22,6 +22,11 @@ class Cut(ABC):
 
 class SimpleCut(Cut):
     def __init__(self, base, predicate):
+        """base must be a Var, and predicate is a callable object that will
+        be passed a dataframe and must return a boolean series.
+
+        mycut = SimpleCut(myvar, lambda df:df["q1"]>0.75)
+        """
         self.base = base
         self.predicate = predicate
 

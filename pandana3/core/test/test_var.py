@@ -135,7 +135,7 @@ def test_filtered_var_two():
     # Make the 'base' Var for the FilteredVar: electron pt
     # Make the FilteredVar
     v1 = SimpleVar("elequal", ["q1"])
-    good = SimpleCut(v1, lambda q1: q1 > 0.75)
+    good = SimpleCut(v1, lambda df: df["q1"] > 0.75)
     v2 = SimpleVar("electrons", ["pt"])
     good_electrons = FilteredVar(v2, good)
     assert isinstance(good_electrons, FilteredVar)
