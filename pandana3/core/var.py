@@ -1,14 +1,15 @@
+from __future__ import annotations
 from pandana3.core.grouping import Grouping
 from pandana3.core import index
 from pandana3.core.index import Index, SimpleIndex, MultiIndex
 from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import List, Set
+from typing import List, Set, Callable
 import h5py as h5
 
 
-def verify_type(val, typ, msg):
+def verify_type(val, typ, msg: str) -> None:
     """If 'val' is not of type 'typ', raise a TypeError with the given message"""
     if not isinstance(val, typ):
         raise TypeError(msg)
@@ -51,11 +52,11 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def add_columns(self, column_names: List[str]):
+    def add_columns(self, column_names: List[str]) -> None:
         """Add one or more new columns to be read."""
         pass
 
-    def filter_by(self, cut):
+    def filter_by(self, cut: Cut) -> FilteredVar:
         """Return a FilteredVar that uses self as a base, and applies
         the given cut."""
         return FilteredVar(self, cut)
@@ -66,7 +67,7 @@ class ConstantVar(Var):
     single row. It does not read any file.
     """
 
-    def __init__(self, name: str, value):
+    def __init__(self, name: str, value: float):
         self.value = pd.DataFrame({name: value})
 
     @abstractmethod
@@ -86,7 +87,7 @@ class ConstantVar(Var):
         pass
 
     @abstractmethod
-    def inq_index(self):
+    def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
         return SimpleIndex()
 
@@ -137,12 +138,12 @@ class SimpleVar(Var):
         evaluation. For a SimpleVar, this is always the same as the columns."""
         return self.columns
 
-    def inq_index(self):
+    def inq_index(self) -> Index:
         """Return the Index to be used for this Var. For a SimpleVar, this is
         always a trivial SimpleIndex, because we're reading all the rows."""
         return SimpleIndex()
 
-    def inq_grouping(self):
+    def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var. A SimpleVar is ungrouped,
         and so returns a Grouping that is fundamental."""
         return Grouping(column_names=None)
@@ -189,7 +190,7 @@ class GroupedVar(Var):
     which results in a dataframe with columns (nelec, ptsum)?
     """
 
-    def __init__(self, var, grouping: List[str], reduction):
+    def __init__(self, var: Var, grouping: List[str], reduction):
         self.var = var
         self.var.add_columns(grouping)
         self.grouping = Grouping(grouping)
@@ -204,13 +205,13 @@ class GroupedVar(Var):
     def inq_result_columns(self) -> List[str]:
         raise NotImplementedError("GroupedVar inq_result_columns is not implemented.")
 
-    def inq_index(self):
+    def inq_index(self) -> Index:
         return self.var.inq_index()
 
     def inq_grouping(self) -> Grouping:
         return self.grouping
 
-    def eval(self, h5file) -> pd.DataFrame:
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         temp = self.var.eval(h5file)
         # TODO: Is it more efficient to have the resulting dataframe carry the index?
         # TODO: Is it better to sort, or not to sort? Our data comes already sorted.
@@ -238,7 +239,7 @@ class MutatedVar(Var):
           Do we want to require pd.DataFrame?
     """
 
-    def __init__(self, var, name, mutation):
+    def __init__(self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]):
         self.var = var
         self.name = name
         self.mutate = mutation
@@ -253,7 +254,7 @@ class MutatedVar(Var):
         original_columns = self.var.inq_result_columns()
         return original_columns + [self.name]
 
-    def inq_index(self):
+    def inq_index(self) -> Index:
         return self.var.inq_index()
 
     def inq_grouping(self) -> Grouping:
@@ -262,7 +263,7 @@ class MutatedVar(Var):
     def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
-    def eval(self, h5file) -> pd.DataFrame:
+    def eval(self, h5file: h5.File) -> pd.DataFrame:
         temp = self.var.eval(h5file)
 
         # TODO: Do we want to return the computed frame or append the result
@@ -275,7 +276,7 @@ class MutatedVar(Var):
 class FilteredVar(Var):
     """A FilteredVar is the result of applying a cut to another Var."""
 
-    def __init__(self, base, cut: Cut):
+    def __init__(self, base: Var, cut: Cut):
         assert isinstance(base, Var)
         assert isinstance(cut, Cut)
         self.base = base
@@ -290,19 +291,19 @@ class FilteredVar(Var):
         # order; we should not care about the order.
         return set(all_datasets)
 
-    def inq_tables_read(self):
+    def inq_tables_read(self) -> List[str]:
         """Return a list of tables read"""
         all_tables = self.base.inq_tables_read() + self.cut.inq_tables_read()
         # We want to remove any duplicates from the list. Note that this does not preserve
         # order; we should not care about the order.
         return list(set(all_tables))
 
-    def inq_result_columns(self):
+    def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
         return self.base.inq_result_columns()
 
-    def inq_index(self):
+    def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
         cut_idx = self.cut.inq_index()
         base_idx = self.base.inq_index()
@@ -310,7 +311,7 @@ class FilteredVar(Var):
 
         return index.make_index(self.cut.inq_index(), self.base.inq_index())
 
-    def inq_grouping(self):
+    def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
         pass
 
@@ -321,6 +322,6 @@ class FilteredVar(Var):
         good = self.cut.eval(h5file)
         return tmp[good]
 
-    def add_columns(self, column_names: List[str]):
+    def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
         raise NotImplementedError("We don't know how to add columns to a FilteredVar")

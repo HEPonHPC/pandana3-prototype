@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, List
 import copy
 
@@ -21,7 +22,7 @@ class Grouping:
         """A Grouping is trivial if each row is its own group."""
         return len(self.column_names) == 0
 
-    def combine(self, other: "Grouping") -> "Grouping":
+    def combine(self, other: Grouping) -> Grouping:
         """Return a new Grouping that is the result of combining 'other'
         with self.
         """
@@ -37,8 +38,10 @@ class Grouping:
             return copy.deepcopy(self)
         raise ValueError("Can not combine incompatible Groupings")
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Two Groupings are equal if they have the same column names."""
         # TODO: this implementation cares about the order of the names.
         # Should we instead *not* care about the order?
+        if not isinstance(other, Grouping):
+            return NotImplemented
         return self.column_names == other.column_names
