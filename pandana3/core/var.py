@@ -315,7 +315,7 @@ class FilteredVar(Var):
 
     def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
-        pass
+        return self.base.inq_grouping()
 
     def eval(self, h5file: h5.File) -> pd.DataFrame:
         # TODO: Optimize this so that we don't evaluate
