@@ -158,6 +158,7 @@ def test_filtered_var_two():
             df.index.values, np.array([0, 10, 11, 12, 18, 20, 21, 25, 28])
         )
 
+
 def test_filtered_var_bad():
     # Should not be able to create a FilteredVar from a Cut with grouping level
     # of "electrons" and a Var with grouping level of "events" or "muons".
