@@ -2,6 +2,7 @@ import pytest
 from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
 from pandana3.core.cut import SimpleCut
 from pandana3.core.index import SimpleIndex
+from pandana3.core.grouping import Grouping
 import h5py as h5
 import pandas as pd
 import numpy as np
@@ -141,8 +142,23 @@ def test_filtered_var_two():
     assert isinstance(good_electrons, FilteredVar)
     assert good_electrons.inq_datasets_read() == {"/elequal/q1", "/electrons/pt"}
     assert good_electrons.inq_result_columns() == ["pt"]
+    assert not good_electrons.inq_index().is_trivial
+    assert isinstance(good_electrons.inq_index(), SimpleIndex)
+    assert good_electrons.inq_grouping() == Grouping()
+    assert good_electrons.inq_grouping().is_trivial
 
     with h5.File("small.h5", "r") as f:
         df = good_electrons.eval(f)
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 9  # there are 9 good electrons
+        assert list(df.columns) == ["pt"]
+        expected = np.array([11.6, 30.8, 11.7, 7.34, 44.3, 29.1, 13.9, 58.7, 34.4])
+        assert np.array(df["pt"]) == pytest.approx(expected, rel=0.01)
+        assert np.array_equal(
+            df.index.values, np.array([0, 10, 11, 12, 18, 20, 21, 25, 28])
+        )
+
+def test_filtered_var_bad():
+    # Should not be able to create a FilteredVar from a Cut with grouping level
+    # of "electrons" and a Var with grouping level of "events" or "muons".
+    pass
