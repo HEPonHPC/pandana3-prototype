@@ -19,7 +19,7 @@ class Index:
 class SimpleIndex(Index):
     def __init__(self, trivial: bool = True):
         super(SimpleIndex, self).__init__(trivial)
-    
+
 
 class MultiIndex(Index):
     def __init__(self, trivial: bool = True, grouping: Grouping = Grouping()):

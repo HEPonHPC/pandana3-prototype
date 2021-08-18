@@ -239,7 +239,9 @@ class MutatedVar(Var):
           Do we want to require pd.DataFrame?
     """
 
-    def __init__(self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]):
+    def __init__(
+        self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]
+    ):
         self.var = var
         self.name = name
         self.mutate = mutation

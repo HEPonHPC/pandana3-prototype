@@ -5,6 +5,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from typing import List, Set, Callable
 
+
 class Cut(ABC):
     @abstractmethod
     def eval(self, f: h5.File) -> pd.Series:
@@ -36,6 +37,7 @@ class SimpleCut(Cut):
         # It would be nice to have the type specficiation on the argument list
         # but that introduces a circular dependency between cut.py and var.py.
         from pandana3.core.var import Var
+
         self.base: Var = base
         self.predicate = predicate
 
