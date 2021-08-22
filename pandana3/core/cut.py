@@ -25,6 +25,10 @@ class Cut(ABC):
     def inq_index(self) -> Index:
         pass
 
+    @abstractmethod
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        pass
+
 
 class SimpleCut(Cut):
     def __init__(self, base, predicate: Callable[[pd.DataFrame], pd.Series]):
@@ -58,3 +62,6 @@ class SimpleCut(Cut):
         """Return a bool series."""
         full = self.base.eval(f)
         return self.predicate(full)
+
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        self.base.resolve_metadata(h5file)

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from pandana3.core.grouping import Grouping
 from pandana3.core import index
 from pandana3.core.index import Index, SimpleIndex, MultiIndex
@@ -7,6 +8,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from typing import List, Set, Callable
 import h5py as h5
+import numpy as np
 
 
 def verify_type(val, typ, msg: str) -> None:
@@ -56,6 +58,10 @@ class Var(ABC):
         """Add one or more new columns to be read."""
         pass
 
+    @abstractmethod
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        pass
+
     def filter_by(self, cut: Cut) -> FilteredVar:
         """Return a FilteredVar that uses self as a base, and applies
         the given cut."""
@@ -98,6 +104,10 @@ class ConstantVar(Var):
         """Add a new columns to be read."""
         raise TypeError("you can't add columns to a ConstVar")
 
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        # ConstantVars do not have any metadata to resolve
+        pass
+
 
 class SimpleVar(Var):
     """A SimpleVar is a Var that is read directly from a file."""
@@ -116,6 +126,7 @@ class SimpleVar(Var):
             raise ValueError("column_names must be a nonempty list of strings")
         self.table = table_name
         self.columns = column_names
+        self.index_columns = None  # only assigned after resolve_metadata is called.
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
@@ -163,6 +174,13 @@ class SimpleVar(Var):
             if not name in self.columns:
                 self.columns.append(name)
 
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        """Use the specified file f to fill out the metadata that can not
+        be determined until access to the file is possible.
+        """
+        assert h5file, "Attempt to resolve Var metadata with a non-open File"
+        self.index_columns = h5file[self.table].attrs["index_cols"].tolist()
+
 
 class GroupedVar(Var):
     """A GroupedVar has an underlying Var used in evaluation, and a grouping
@@ -183,7 +201,12 @@ class GroupedVar(Var):
     which results in a dataframe with columns (nelec, ptsum)?
     """
 
-    def __init__(self, var: Var, grouping: List[str], reduction):
+    def __init__(
+        self,
+        var: Var,
+        grouping: List[str],
+        reduction: Callable[[np.ndarray], np.float64],
+    ):
         self.var = var
         self.var.add_columns(grouping)
         self.grouping = Grouping(grouping)
@@ -216,6 +239,9 @@ class GroupedVar(Var):
 
     def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
+
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        return super().resolve_metadata(h5file)
 
 
 class MutatedVar(Var):
@@ -266,6 +292,9 @@ class MutatedVar(Var):
         # TODO: this assumes the mutation yields a Series.
         temp[self.name] = self.mutate(temp)
         return temp
+
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        return super().resolve_metadata(h5file)
 
 
 class FilteredVar(Var):
@@ -320,3 +349,8 @@ class FilteredVar(Var):
     def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
         raise NotImplementedError("We don't know how to add columns to a FilteredVar")
+
+    def resolve_metadata(self, h5file: h5.File) -> None:
+        assert h5.File, "Attempt to resolve Var metadata with a non-open File"
+        self.base.resolve_metadata(h5file)
+        self.cut.resolve_metadata(h5file)

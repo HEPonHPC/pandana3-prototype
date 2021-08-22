@@ -36,8 +36,11 @@ def test_simple_var_basic():
     }
     idx = x.inq_index()
     assert idx.is_trivial, "SimpleVar did not return a trivial Index"
+    assert x.index_columns is None
 
     with h5.File("small.h5", "r") as f:
+        x.resolve_metadata(f)
+        assert x.index_columns == ["evtnum", "electrons_idx"]
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
         assert len(d) == 29
@@ -162,4 +165,28 @@ def test_filtered_var_two():
 def test_filtered_var_bad():
     # Should not be able to create a FilteredVar from a Cut with grouping level
     # of "electrons" and a Var with grouping level of "events" or "muons".
-    pass
+    electrons = SimpleVar("electrons", ["pt", "eta"])
+    muons = SimpleVar("muons", ["pt", "phi"])
+
+    with pytest.raises(ValueError):
+        bad_var = FilteredVar(electrons, SimpleCut(muons, lambda df: df["pt"] > 10.0))
+
+
+def test_filtered_var_three():
+    # Select events that are interesting (met > 10)
+    # Select electron pt, eta that are in events that are interesting.
+    events = SimpleVar("events", ["met"])
+    good_events = SimpleCut(events, lambda df: df["met"] > 10.0)
+    electrons = SimpleVar("electrons", ["pt", "eta"])
+    good_electrons = FilteredVar(electrons, good_events)
+    assert isinstance(good_electrons, FilteredVar)
+
+    with h5.File("small.h5", "r") as f:
+        good_electrons.resolve_metadata(f)
+        assert good_electrons.inq_datasets_read() == {
+            "/events/met",
+            "/events/eventum",
+            "/electrons/pt",
+            "/electrons/eta",
+            "/electrons/eventnum",
+        }
