@@ -10,3 +10,5 @@ small.h5
 .pyre_configuration
 .watchmanconfig
 .vscode
+*.dot
+*.png
