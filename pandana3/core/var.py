@@ -70,37 +70,30 @@ class ConstantVar(Var):
     def __init__(self, name: str, value: float):
         self.value = pd.DataFrame({name: value})
 
-    @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         return set()
 
-    @abstractmethod
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read"""
         pass
 
-    @abstractmethod
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
         pass
 
-    @abstractmethod
     def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
         return SimpleIndex()
 
-    @abstractmethod
     def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
         pass
 
-    @abstractmethod
     def eval(self, h5file: h5.File) -> pd.DataFrame:
         return self.value
 
-    @abstractmethod
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
         raise TypeError("you can't add columns to a ConstVar")
