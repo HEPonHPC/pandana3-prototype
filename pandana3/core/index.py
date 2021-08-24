@@ -35,6 +35,11 @@ class SimpleIndex(Index):
     def __init__(self, trivial: bool = True):
         super(SimpleIndex, self).__init__(trivial)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(object, SimpleIndex):
+            return NotImplemented
+        return self.is_trivial == other.is_trivial
+
 
 class MultiIndex(Index):
     """A MultiIndex represents and index that contains data from columns."""
@@ -48,3 +53,9 @@ def make_index(idx1: Index, idx2: Index) -> Index:
     if isinstance(idx1, SimpleIndex) and isinstance(idx2, SimpleIndex):
         return SimpleIndex(is_trivial)
     return MultiIndex(is_trivial, idx1.grouping().combine(idx2.grouping()))
+
+
+def __eq__(self, other: object) -> bool:
+    if not isinstance(object, MultiIndex):
+        return NotImplemented
+    return self.is_trivial == other.is_trivial and self.gping == other.gping
