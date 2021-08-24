@@ -64,4 +64,4 @@ class SimpleCut(Cut):
         return self.predicate(full)
 
     def resolve_metadata(self, h5file: h5.File) -> None:
-        self.base.resolve_metadata(h5file)
+        return self.base.resolve_metadata(h5file)

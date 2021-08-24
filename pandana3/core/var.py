@@ -59,7 +59,10 @@ class Var(ABC):
         pass
 
     @abstractmethod
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+        """"Return the index columns this Var will (or might?) have.
+        
+        Raise an exception if the Var is malformed."""
         pass
 
     def filter_by(self, cut: Cut) -> FilteredVar:
@@ -104,9 +107,9 @@ class ConstantVar(Var):
         """Add a new columns to be read."""
         raise TypeError("you can't add columns to a ConstVar")
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         # ConstantVars do not have any metadata to resolve
-        pass
+        return []
 
 
 class SimpleVar(Var):
@@ -159,7 +162,12 @@ class SimpleVar(Var):
         In this first version, we have no limitation on the rows read; this
         always reads all rows."""
         assert h5file, "Attempt to evaluate a Var with a non-open File"
-        data = {name: h5file[f"/{self.table}/{name}"] for name in self.columns}
+        # TODO: Replace this dictionary comprehension by something that will raise an
+        # exception indicating which column(s) could not be found.
+        try:
+            data = {name: h5file[f"/{self.table}/{name}"] for name in self.columns}
+        except KeyError:
+            raise ValueError("Unable to find requested column in HDF5 file")
         result = pd.DataFrame(data)
         return result
 
@@ -180,6 +188,7 @@ class SimpleVar(Var):
         """
         assert h5file, "Attempt to resolve Var metadata with a non-open File"
         self.index_columns = h5file[self.table].attrs["index_cols"].tolist()
+        return self.index_columns
 
 
 class GroupedVar(Var):
@@ -352,5 +361,10 @@ class FilteredVar(Var):
 
     def resolve_metadata(self, h5file: h5.File) -> None:
         assert h5.File, "Attempt to resolve Var metadata with a non-open File"
-        self.base.resolve_metadata(h5file)
-        self.cut.resolve_metadata(h5file)
+        base_index_columns = self.base.resolve_metadata(h5file)
+        cut_index_columns = self.cut.resolve_metadata(h5file)
+        # We have
+        #   evtnum, electrons_idx        !=  evtnum
+        for b, c in zip(base_index_columns, cut_index_columns):
+            if b != c:
+                raise ValueError("FilteredVar has incompatible index columns")

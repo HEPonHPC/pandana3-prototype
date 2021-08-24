@@ -10,7 +10,7 @@ import numpy as np
 
 class BadVar(Var):
     """This class is defective because it does not implement the required
-    method `eval`."""
+    methods."""
 
     pass
 
@@ -41,6 +41,11 @@ def test_simple_var_basic():
     with h5.File("small.h5", "r") as f:
         x.resolve_metadata(f)
         assert x.index_columns == ["evtnum", "electrons_idx"]
+        assert x.inq_datasets_read() == {
+            "/electrons/evtnum",
+            "/electrons/pt",
+            "/electrons/phi",
+        }
         d = x.eval(f)
         assert isinstance(d, pd.DataFrame)
         assert len(d) == 29
@@ -68,7 +73,7 @@ def test_grouped_var_basic():
     assert x is not None
     assert x.inq_tables_read() == ["electrons"]
     assert x.inq_datasets_read() == {"/electrons/pt", "/electrons/evtnum"}
-    # assert x.inq_index() == base.inq_index()
+    assert x.inq_index() == base.inq_index()
 
     with h5.File("small.h5", "r") as f:
         d = x.eval(f)
@@ -98,7 +103,7 @@ def test_mutated_var_basic():
         assert np.abs(d["dist"][2] - 0.750797) < 1.0e-3
 
 
-def test_filtered_var_basic():
+def test_filtered_var_cut_and_var_use_same_var():
     """Test a FilteredVar that applies a cut to the same table from which
     the cut was calculated."""
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
@@ -131,19 +136,19 @@ def test_filtered_var_basic():
         assert cut_df.equals(cut_df3)
 
 
-def test_filtered_var_two():
+def test_filtered_var_compatible_cut_and_var():
     """Test a FilteredVar that applies a cut to one table that was
     calculated from another table."""
     # Make the 'base' Var for the Cut on electron quality.
     # Make the Cut for the FilteredVar
     # Make the 'base' Var for the FilteredVar: electron pt
     # Make the FilteredVar
-    v1 = SimpleVar("elequal", ["q1"])
+    v1 = SimpleVar("electrons_qual", ["q1"])
     good = SimpleCut(v1, lambda df: df["q1"] > 0.75)
     v2 = SimpleVar("electrons", ["pt"])
     good_electrons = FilteredVar(v2, good)
     assert isinstance(good_electrons, FilteredVar)
-    assert good_electrons.inq_datasets_read() == {"/elequal/q1", "/electrons/pt"}
+    assert good_electrons.inq_datasets_read() == {"/electrons_qual/q1", "/electrons/pt"}
     assert good_electrons.inq_result_columns() == ["pt"]
     assert not good_electrons.inq_index().is_trivial
     assert isinstance(good_electrons.inq_index(), SimpleIndex)
@@ -162,14 +167,20 @@ def test_filtered_var_two():
         )
 
 
-def test_filtered_var_bad():
+def test_filtered_var_incompatible_cut_and_var():
     # Should not be able to create a FilteredVar from a Cut with grouping level
-    # of "electrons" and a Var with grouping level of "events" or "muons".
+    # of "electrons" and a Var with grouping level of "muons".
     electrons = SimpleVar("electrons", ["pt", "eta"])
     muons = SimpleVar("muons", ["pt", "phi"])
+    bad_var = FilteredVar(electrons, SimpleCut(muons, lambda df: df["pt"] > 10.0))
 
+    # TODO: Var.resolve_metadata should raise a better exception type than ValueError.
+    # We need an exception type that carries information meaningful to the user about
+    # what failed.
     with pytest.raises(ValueError):
-        bad_var = FilteredVar(electrons, SimpleCut(muons, lambda df: df["pt"] > 10.0))
+        with h5.File("small.h5", "r") as f:
+            bad_var.resolve_metadata(f)
+            assert False # should never get here, we should have raised an exception
 
 
 def test_filtered_var_three():
@@ -185,8 +196,8 @@ def test_filtered_var_three():
         good_electrons.resolve_metadata(f)
         assert good_electrons.inq_datasets_read() == {
             "/events/met",
-            "/events/eventum",
+            "/events/evtnum",
             "/electrons/pt",
             "/electrons/eta",
-            "/electrons/eventnum",
+            "/electrons/evtnum",
         }
