@@ -63,24 +63,25 @@ def make_events(
     new_group["nelectrons"] = electron_multiplicities
     new_group["nmuons"] = muon_multiplicities
     new_group["met"] = gen.chisquare(5, n_events) * 10
-    new_group.attrs["index_cols"] = ["evtum"]
+    new_group.attrs["index_cols"] = ["evtnum"]
 
 
 def make_particle_qualities(
-    tablename: str,
+    particlename: str,
     outfile: h5.File,
     multiplicities: np.ndarray,
     gen: np.random.Generator,
 ) -> None:
+    tablename = f"{particlename}_qual"
     n_total = multiplicities.sum()
     evtnum = make_eventum_array(multiplicities)
     idx = make_index_array(multiplicities)
     q1 = gen.uniform(0.0, 1.0, size=n_total)
     q2 = gen.uniform(0.0, 1.0, size=n_total)
     new_group = outfile.create_group(tablename)
-    new_group.attrs["index_cols"] = ["evtnum", "idx"]
+    new_group.attrs["index_cols"] = ["evtnum", f"{particlename}_idx"]
     new_group["evtnum"] = evtnum
-    new_group["idx"] = idx
+    new_group[f"{particlename}_idx"] = idx
     new_group["q1"] = q1
     new_group[f"q2"] = q2
 
@@ -104,7 +105,7 @@ def make_file(outfile):
     # Add another table with the same "electrons" grouping level, with new values
     # for each electron in each event.
     eqgen = default_rng(seed=137)
-    make_particle_qualities("elequal", outfile, electron_multiplicities, eqgen)
+    make_particle_qualities("electrons", outfile, electron_multiplicities, eqgen)
 
     egen = default_rng(seed=713)
     make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, egen)
