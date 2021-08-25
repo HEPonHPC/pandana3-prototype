@@ -1,3 +1,11 @@
+"""Module Var provides the abstract class Var, and the concrete subclasses:
+  ConstantVar: a Var representing a constant
+  SimpleVar: a Var read directly from an HDF5 file table
+  GroupedVar: a Var representing a grouping operation on a base Var
+  MutatedVar: a Var representing a length-preserving transformation on a base Var
+  FilteredVar: a Var representing the result of filtering another Var
+
+  """
 from __future__ import annotations
 
 from pandana3.core.grouping import Grouping
