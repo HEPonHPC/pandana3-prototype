@@ -8,16 +8,15 @@
   """
 from __future__ import annotations
 
-from pandana3.core.grouping import Grouping
-from pandana3.core import index
-from pandana3.core.index import Index, SimpleIndex, MultiIndex
-from pandana3.core.cut import Cut
 from abc import ABC, abstractmethod
-import pandas as pd
 from typing import List, Set, Callable
+import pandas as pd
 import h5py as h5
 import numpy as np
-
+from pandana3.core.grouping import Grouping
+from pandana3.core import index
+from pandana3.core.index import Index, SimpleIndex
+from pandana3.core.cut import Cut
 
 def verify_type(val, typ, msg: str) -> None:
     """If 'val' is not of type 'typ', raise a TypeError with the given message"""
@@ -34,44 +33,45 @@ class Var(ABC):
     @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read"""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def eval(self, h5file: h5.File) -> pd.DataFrame:
-        pass
+        """Return the DataFrame represented by this Var."""
+        raise NotImplementedError
 
     @abstractmethod
     def add_columns(self, column_names: List[str]) -> None:
         """Add one or more new columns to be read."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
         """ Return the index columns this Var will (or might?) have.
 
         Raise an exception if the Var is malformed."""
-        return []
+        raise NotImplementedError
 
     def filter_by(self, cut: Cut) -> FilteredVar:
         """Return a FilteredVar that uses self as a base, and applies
@@ -85,7 +85,8 @@ class ConstantVar(Var):
     """
 
     def __init__(self, name: str, value: float):
-        self.value = pd.DataFrame({name: value})
+        self.col_name = name
+        self.value = value
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
@@ -93,12 +94,12 @@ class ConstantVar(Var):
 
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read"""
-        pass
+        return []
 
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
         evaluation."""
-        pass
+        return [self.col_name]
 
     def inq_index(self) -> Index:
         """Return the Index to be used for this Var."""
@@ -106,10 +107,11 @@ class ConstantVar(Var):
 
     def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
-        pass
+        return Grouping()
 
     def eval(self, h5file: h5.File) -> pd.DataFrame:
-        return self.value
+        result = pd.DataFrame({self.col_name: np.array([self.value])})
+        return result
 
     def add_columns(self, column_names: List[str]):
         """Add a new columns to be read."""
@@ -174,8 +176,8 @@ class SimpleVar(Var):
         # exception indicating which column(s) could not be found.
         try:
             data = {name: h5file[f"/{self.table}/{name}"] for name in self.columns}
-        except KeyError:
-            raise ValueError("Unable to find requested column in HDF5 file")
+        except KeyError as k:
+            raise ValueError("Unable to find requested column in HDF5 file") from k
         result = pd.DataFrame(data)
         return result
 
@@ -349,8 +351,6 @@ class FilteredVar(Var):
         cut_idx = self.cut.inq_index()
         base_idx = self.base.inq_index()
         return index.make_index(base_idx, cut_idx)
-
-        return index.make_index(self.cut.inq_index(), self.base.inq_index())
 
     def inq_grouping(self) -> Grouping:
         """Return the Grouping used for this Var."""
