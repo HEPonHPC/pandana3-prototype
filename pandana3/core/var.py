@@ -60,8 +60,8 @@ class Var(ABC):
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        """"Return the index columns this Var will (or might?) have.
-        
+        """ "Return the index columns this Var will (or might?) have.
+
         Raise an exception if the Var is malformed."""
         pass
 
