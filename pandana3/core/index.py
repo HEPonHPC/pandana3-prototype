@@ -36,7 +36,7 @@ class SimpleIndex(Index):
         super(SimpleIndex, self).__init__(trivial)
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(object, SimpleIndex):
+        if not isinstance(other, SimpleIndex):
             return NotImplemented
         return self.is_trivial == other.is_trivial
 
