@@ -18,6 +18,7 @@ from pandana3.core import index
 from pandana3.core.index import Index, SimpleIndex
 from pandana3.core.cut import Cut
 
+
 def verify_type(val, typ, msg: str) -> None:
     """If 'val' is not of type 'typ', raise a TypeError with the given message"""
     if not isinstance(val, typ):
@@ -68,7 +69,7 @@ class Var(ABC):
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        """ Return the index columns this Var will (or might?) have.
+        """Return the index columns this Var will (or might?) have.
 
         Raise an exception if the Var is malformed."""
         raise NotImplementedError
@@ -376,4 +377,4 @@ class FilteredVar(Var):
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
                 raise ValueError("FilteredVar has incompatible index columns")
-        return [] # This is not correct; what should we return?
+        return []  # This is not correct; what should we return?
