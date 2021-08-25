@@ -1,29 +1,37 @@
+"""Module cut provides the abstract base class Cut and the concrete subclasses:
+
+  SimpleCut: represents a cut based upon applying a stateless predicate to the contents of a Var.
+
+"""
 from __future__ import annotations
-import h5py as h5
-from pandana3.core.index import Index
-import pandas as pd
 from abc import ABC, abstractmethod
 from typing import List, Set, Callable
+import h5py as h5
+import pandas as pd
+from pandana3.core.index import Index
 
 
 class Cut(ABC):
     @abstractmethod
     def eval(self, f: h5.File) -> pd.Series:
-        pass
+        """ " Evaluate the Cut using data supplied b the given file f, returning a
+        Pandas Series of True/False values.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
         """Return the full names of the datasets that will be read by this cut."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_tables_read(self) -> List[str]:
         """Return the names of tables that will be read by this cut."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def inq_index(self) -> Index:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
