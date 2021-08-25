@@ -60,10 +60,10 @@ class Var(ABC):
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        """ "Return the index columns this Var will (or might?) have.
+        """ Return the index columns this Var will (or might?) have.
 
         Raise an exception if the Var is malformed."""
-        pass
+        return []
 
     def filter_by(self, cut: Cut) -> FilteredVar:
         """Return a FilteredVar that uses self as a base, and applies
@@ -182,7 +182,7 @@ class SimpleVar(Var):
             if not name in self.columns:
                 self.columns.append(name)
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         """Use the specified file f to fill out the metadata that can not
         be determined until access to the file is possible.
         """
@@ -249,7 +249,7 @@ class GroupedVar(Var):
     def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         return super().resolve_metadata(h5file)
 
 
@@ -302,7 +302,7 @@ class MutatedVar(Var):
         temp[self.name] = self.mutate(temp)
         return temp
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         return super().resolve_metadata(h5file)
 
 
@@ -359,7 +359,7 @@ class FilteredVar(Var):
         """Add a new columns to be read."""
         raise NotImplementedError("We don't know how to add columns to a FilteredVar")
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         assert h5.File, "Attempt to resolve Var metadata with a non-open File"
         base_index_columns = self.base.resolve_metadata(h5file)
         cut_index_columns = self.cut.resolve_metadata(h5file)
@@ -368,3 +368,4 @@ class FilteredVar(Var):
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
                 raise ValueError("FilteredVar has incompatible index columns")
+        return [] # This is not correct; what should we return?

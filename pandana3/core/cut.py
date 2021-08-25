@@ -26,8 +26,8 @@ class Cut(ABC):
         pass
 
     @abstractmethod
-    def resolve_metadata(self, h5file: h5.File) -> None:
-        pass
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+        return []
 
 
 class SimpleCut(Cut):
@@ -63,5 +63,5 @@ class SimpleCut(Cut):
         full = self.base.eval(f)
         return self.predicate(full)
 
-    def resolve_metadata(self, h5file: h5.File) -> None:
+    def resolve_metadata(self, h5file: h5.File) -> List[str]:
         return self.base.resolve_metadata(h5file)
