@@ -98,7 +98,7 @@ def test_filtered_var_three():
     assert isinstance(good_electrons, FilteredVar)
 
     with h5.File("small.h5", "r") as f:
-        good_electrons.resolve_metadata(f)
+        column_names = good_electrons.resolve_metadata(f)
         assert good_electrons.inq_datasets_read() == {
             "/events/met",
             "/events/evtnum",
@@ -106,3 +106,21 @@ def test_filtered_var_three():
             "/electrons/eta",
             "/electrons/evtnum",
         }
+
+def test_doubly_filtered_var():
+    # First select electron pt for electrons in events with met > 10
+    # Use this for a cut on such electrons with pt > 15
+    # Use this cut in a FilteredVar returning electons_qual q1, q2
+    v1 = SimpleVar("events", ["met"])
+    c1 = SimpleCut(v1, lambda df: df["met"] > 10)
+    v2 = SimpleVar("electrons", ["pt"])
+    fv1 = FilteredVar(v2, c1)
+
+    c2 = SimpleCut(fv1, lambda df: df["pt"] > 15)
+    v3 = SimpleVar("electrons_qual", ["q1", "q2"])
+    fv2 = FilteredVar(v3, c2)
+
+    assert isinstance(fv2, FilteredVar)
+
+    with h5.File("small.h5", "r") as f:
+        index_column_names = fv2.resolve_metadata(f)

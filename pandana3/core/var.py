@@ -372,9 +372,16 @@ class FilteredVar(Var):
         assert h5.File, "Attempt to resolve Var metadata with a non-open File"
         base_index_columns = self.base.resolve_metadata(h5file)
         cut_index_columns = self.cut.resolve_metadata(h5file)
-        # We have
-        #   evtnum, electrons_idx        !=  evtnum
+
+        if base_index_columns == cut_index_columns:
+            return base_index_columns
+        
+        if len(cut_index_columns) > len(base_index_columns):
+            # TODO: use a custom exception type with meaningful data here
+            raise ValueError("FilteredVar has incompatible index columns")
+        
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
                 raise ValueError("FilteredVar has incompatible index columns")
+        
         return []  # This is not correct; what should we return?
