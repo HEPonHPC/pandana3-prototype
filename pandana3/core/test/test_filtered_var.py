@@ -99,6 +99,7 @@ def test_filtered_var_three():
 
     with h5.File("small.h5", "r") as f:
         column_names = good_electrons.resolve_metadata(f)
+        assert column_names == ["evtnum", "electrons_idx"]
         assert good_electrons.inq_datasets_read() == {
             "/events/met",
             "/events/evtnum",
@@ -106,6 +107,7 @@ def test_filtered_var_three():
             "/electrons/eta",
             "/electrons/evtnum",
         }
+
 
 def test_doubly_filtered_var():
     # First select electron pt for electrons in events with met > 10

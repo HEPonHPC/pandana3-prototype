@@ -375,13 +375,13 @@ class FilteredVar(Var):
 
         if base_index_columns == cut_index_columns:
             return base_index_columns
-        
+
         if len(cut_index_columns) > len(base_index_columns):
             # TODO: use a custom exception type with meaningful data here
             raise ValueError("FilteredVar has incompatible index columns")
-        
+
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
                 raise ValueError("FilteredVar has incompatible index columns")
-        
-        return []  # This is not correct; what should we return?
+
+        return base_index_columns  # This is not correct; what should we return?
