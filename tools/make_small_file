@@ -85,6 +85,17 @@ def make_particle_qualities(
     new_group["q1"] = q1
     new_group[f"q2"] = q2
 
+def make_particle_hits(
+    particle_name: str, 
+    outfile: h5.File,
+    multiplicities: np.ndarray,
+    hit_multiplicities: np.ndarray,
+    gen: np.random.Generator,
+) -> None:
+    tablename = f"{particlename}_hits"
+    n_total = hit_multiplicities.sum()
+    a = [range(n) for n in hit_multiplicities] 
+    hit_idx = np.array(list(itertools.chain(*a)))
 
 def make_file(outfile):
     """Write an HDF5 file in the tidy-data format."""

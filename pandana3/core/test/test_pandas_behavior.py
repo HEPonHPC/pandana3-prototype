@@ -45,12 +45,11 @@ def electrons_qual():
 
 
 def test_pull_column_from_dataframe(electrons):
-    """"We can extract a single column from a DataFrame, yielding a Series."""
+    """ "We can extract a single column from a DataFrame, yielding a Series."""
     pt = electrons["pt"]
     assert isinstance(pt, pd.Series)
     assert pt.dtype == np.float64
     assert pt.name == "pt"
-
 
 
 def test_select_one_column_from_dataframe(electrons):
