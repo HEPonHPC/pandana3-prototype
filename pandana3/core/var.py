@@ -69,7 +69,7 @@ class Var(ABC):
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        """Return the index columns this Var will (or might?) have.
+        """Return the index columns this Var might have.
 
         Raise an exception if the Var is malformed."""
         raise NotImplementedError
@@ -380,8 +380,11 @@ class FilteredVar(Var):
             # TODO: use a custom exception type with meaningful data here
             raise ValueError("FilteredVar has incompatible index columns")
 
+        common_prefix = []
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
                 raise ValueError("FilteredVar has incompatible index columns")
+            common_prefix.append(b)
 
-        return base_index_columns  # This is not correct; what should we return?
+        self.required_index_columns = common_prefix
+        return base_index_columns

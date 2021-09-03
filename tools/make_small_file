@@ -96,6 +96,7 @@ def make_particle_hits(
     n_total = hit_multiplicities.sum()
     a = [range(n) for n in hit_multiplicities] 
     hit_idx = np.array(list(itertools.chain(*a)))
+    assert False, "Finish this function..."
 
 def make_file(outfile):
     """Write an HDF5 file in the tidy-data format."""
