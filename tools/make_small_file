@@ -6,6 +6,7 @@ import h5py as h5
 from numpy.random import default_rng
 import numpy as np
 from math import pi
+import numpy_numerology as numer
 
 
 def make_eventum_array(multiplicities: np.ndarray) -> np.ndarray:
@@ -67,42 +68,55 @@ def make_events(
 
 
 def make_particle_qualities(
-    particlename: str,
+    particle_name: str,
     outfile: h5.File,
     multiplicities: np.ndarray,
     gen: np.random.Generator,
 ) -> None:
-    tablename = f"{particlename}_qual"
+    tablename = f"{particle_name}_qual"
     n_total = multiplicities.sum()
     evtnum = make_eventum_array(multiplicities)
     idx = make_index_array(multiplicities)
     q1 = gen.uniform(0.0, 1.0, size=n_total)
     q2 = gen.uniform(0.0, 1.0, size=n_total)
     new_group = outfile.create_group(tablename)
-    new_group.attrs["index_cols"] = ["evtnum", f"{particlename}_idx"]
+    new_group.attrs["index_cols"] = ["evtnum", f"{particle_name}_idx"]
     new_group["evtnum"] = evtnum
-    new_group[f"{particlename}_idx"] = idx
+    new_group[f"{particle_name}_idx"] = idx
     new_group["q1"] = q1
     new_group[f"q2"] = q2
 
+
 def make_particle_hits(
-    particle_name: str, 
+    particle_name: str,
     outfile: h5.File,
-    multiplicities: np.ndarray,
-    hit_multiplicities: np.ndarray,
+    electrons_per_event: np.ndarray,
+    hits_per_particle: np.ndarray,
+    mean_energy_per_hit: float,
     gen: np.random.Generator,
 ) -> None:
-    tablename = f"{particlename}_hits"
-    n_total = hit_multiplicities.sum()
-    a = [range(n) for n in hit_multiplicities] 
-    hit_idx = np.array(list(itertools.chain(*a)))
-    assert False, "Finish this function..."
+    tablename = f"{particle_name}_hits"
+    n_total = hits_per_particle.sum()
+    hit_energies = gen.standard_gamma(mean_energy_per_hit, n_total)
+    tablename = f"{particle_name}_hits"
+    new_group = outfile.create_group(tablename)
+    new_group["event_idx"] = numer.make_outer_indices(
+        electrons_per_event, hits_per_particle
+    )
+    new_group["electron_idx"] = numer.repeated_indices(hits_per_particle)
+    new_group["hit_idx"] = numer.flattened_ranges(hits_per_particle)
+    new_group["energy"] = hit_energies
+
+    particle_group = outfile[f"{particle_name}"]
+    particle_group["nhits"] = hits_per_particle
+
 
 def make_file(outfile):
     """Write an HDF5 file in the tidy-data format."""
     n_events = 10
     expected_electrons = 2.5
     expected_muons = 3.5
+    expected_hits_per_electron = 4.5
     # Every table generated should have its own random number stream, seeded,
     # for reproducibility.
 
@@ -118,6 +132,17 @@ def make_file(outfile):
     # for each electron in each event.
     eqgen = default_rng(seed=137)
     make_particle_qualities("electrons", outfile, electron_multiplicities, eqgen)
+
+    hgen = default_rng(seed=131)
+    n_electrons = np.sum(electron_multiplicities)
+    # We want to make sure there is at least 1 hit per electron, so we add 1 to the
+    # poisson generation results
+    hit_multiplicities = (
+        hgen.poisson(lam=expected_hits_per_electron, size=n_electrons) + 1
+    )
+    make_particle_hits(
+        "electrons", outfile, electron_multiplicities, hit_multiplicities, 20.0, hgen
+    )
 
     egen = default_rng(seed=713)
     make_events(outfile, n_events, electron_multiplicities, muon_multiplicities, egen)
