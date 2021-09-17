@@ -90,7 +90,7 @@ def make_particle_qualities(
 def make_particle_hits(
     particle_name: str,
     outfile: h5.File,
-    electrons_per_event: np.ndarray,
+    particles_per_event: np.ndarray,
     hits_per_particle: np.ndarray,
     mean_energy_per_hit: float,
     gen: np.random.Generator,
@@ -100,10 +100,14 @@ def make_particle_hits(
     hit_energies = gen.standard_gamma(mean_energy_per_hit, n_total)
     tablename = f"{particle_name}_hits"
     new_group = outfile.create_group(tablename)
-    new_group["event_idx"] = numer.make_outer_indices(
-        electrons_per_event, hits_per_particle
+    new_group[f"{particle_name}_idx"] = numer.make_outer_indices(
+        particles_per_event, hits_per_particle
     )
-    new_group["electron_idx"] = numer.repeated_indices(hits_per_particle)
+
+    hpp_gen = (x for x in hits_per_particle)
+    hits_per_event = [sum(numer.take(npart, hpp_gen)[0]) for npart in particles_per_event]
+
+    new_group["evtnum"] = numer.repeated_indices(hits_per_event)
     new_group["hit_idx"] = numer.flattened_ranges(hits_per_particle)
     new_group["energy"] = hit_energies
 
