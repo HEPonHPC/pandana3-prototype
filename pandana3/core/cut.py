@@ -37,6 +37,10 @@ class Cut(ABC):
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
         return []
 
+    @abstractmethod
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        raise NotImplementedError
+
 
 class SimpleCut(Cut):
     def __init__(self, base, predicate: Callable[[pd.DataFrame], pd.Series]):
@@ -73,3 +77,6 @@ class SimpleCut(Cut):
 
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
         return self.base.resolve_metadata(h5file)
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        self.base.set_required_indices(required_indices)

@@ -32,6 +32,18 @@ class Var(ABC):
     it can be evaluated to yield a DataFrame."""
 
     @abstractmethod
+    def prepare(self, f: h5.File) -> None:
+        """Prepare for evaluation of this Var. This should be called directly by the
+        user on the Var objects used directly in an analysis."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        """Set the list of index columns that must be read during the
+        evaluation of this Var."""
+        raise NotImplementedError
+
+    @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         raise NotImplementedError
@@ -89,6 +101,14 @@ class ConstantVar(Var):
         self.col_name = name
         self.value = value
 
+    def prepare(self, f: h5.file) -> None:
+        """ConstantVar has no preparation to do."""
+        pass
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        """ConstantVar has no indices to read."""
+        pass
+
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         return set()
@@ -140,11 +160,22 @@ class SimpleVar(Var):
             raise ValueError("column_names must be a nonempty list of strings")
         self.table = table_name
         self.columns = column_names
-        self.index_columns = None  # only assigned after resolve_metadata is called.
+        self.index_columns_to_read = []
+
+    def prepare(self, f: h5.File) -> None:
+        """A SimpleVar has no preparation to do."""
+        pass
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        self.index_columns_to_read = required_indices
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        return {f"/{self.table}/{col_name}" for col_name in self.columns}
+        physics_datasets = {f"/{self.table}/{col_name}" for col_name in self.columns}
+        index_datasets = {
+            f"/{self.table}/{col_name}" for col_name in self.index_columns_to_read
+        }
+        return physics_datasets.update(index_datasets)
 
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read. For a SimpleVar, the length is always
@@ -232,6 +263,12 @@ class GroupedVar(Var):
         self.grouping = Grouping(grouping)
         self.reduction = reduction
 
+    def prepare(self, f: h5.File) -> None:
+        return super().prepare(f)
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        return super().set_required_indices(required_indices)
+
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
@@ -285,6 +322,12 @@ class MutatedVar(Var):
         self.name = name
         self.mutate = mutation
 
+    def prepare(self, f: h5.File) -> None:
+        return super().prepare(f)
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        return super().set_required_indices(required_indices)
+
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
@@ -325,6 +368,15 @@ class FilteredVar(Var):
         assert isinstance(cut, Cut)
         self.base = base
         self.cut = cut
+        self.required_index_columns = None
+
+    def prepare(self, f: h5.File) -> None:
+        self.resolve_metadata(f) # We are intentionally ignoring the returned value
+        self.base.set_required_indices(self.required_index_columns)
+        self.cut.set_required_indices(self.required_index_columns)
+
+    def set_required_indices(self, required_indices: List[str]) -> None:
+        self.required_index_columns = required_indices
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""

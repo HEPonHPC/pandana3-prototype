@@ -29,6 +29,8 @@ def test_filtered_var_cut_and_var_use_same_var():
     var2 = base.filter_by(cut)
 
     with h5.File("small.h5", "r") as f:
+        x.prepare(f)
+
         cut_df = x.eval(f)
         assert isinstance(cut_df, pd.DataFrame)
 
@@ -92,12 +94,17 @@ def test_filtered_var_three():
     # Select events that are interesting (met > 10)
     # Select electron pt, eta that are in events that are interesting.
     events = SimpleVar("events", ["met"])
+    events.index_columns_to_read == []
     good_events = SimpleCut(events, lambda df: df["met"] > 10.0)
     electrons = SimpleVar("electrons", ["pt", "eta"])
     good_electrons = FilteredVar(electrons, good_events)
     assert isinstance(good_electrons, FilteredVar)
 
     with h5.File("small.h5", "r") as f:
+        good_electrons.prepare(f)
+        assert good_electrons.required_index_columns == ["evtnum"]
+        assert events.index_columns_to_read == ["evtnum"]
+        
         column_names = good_electrons.resolve_metadata(f)
         assert column_names == ["evtnum", "electrons_idx"]
         assert good_electrons.inq_datasets_read() == {
