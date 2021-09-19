@@ -104,7 +104,7 @@ def test_filtered_var_three():
         good_electrons.prepare(f)
         assert good_electrons.required_index_columns == ["evtnum"]
         assert events.index_columns_to_read == ["evtnum"]
-        
+
         column_names = good_electrons.resolve_metadata(f)
         assert column_names == ["evtnum", "electrons_idx"]
         assert good_electrons.inq_datasets_read() == {
