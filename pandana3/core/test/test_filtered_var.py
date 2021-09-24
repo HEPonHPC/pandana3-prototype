@@ -39,7 +39,7 @@ def test_filtered_var_cut_and_var_use_same_var(uc00: FilteredVar):
 
         df = uc00.eval(f)
         assert isinstance(df, pd.DataFrame)
-        #TODO: need to test contents of df
+        # TODO: need to test contents of df
 
 
 def test_filtered_var_compatible_cut_and_var():
