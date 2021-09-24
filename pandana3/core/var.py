@@ -371,9 +371,17 @@ class FilteredVar(Var):
         self.required_index_columns = None
 
     def prepare(self, f: h5.File) -> None:
+        assert !self.prepared
+
         self.resolve_metadata(f)  # We are intentionally ignoring the returned value
         self.base.set_required_indices(self.required_index_columns)
         self.cut.set_required_indices(self.required_index_columns)
+        self.set_prepared()
+
+    def set_prepared(self) -> None:
+        self.base.set_prepared()
+        self.cut.set_prepared()
+        self.prepared = True
 
     def set_required_indices(self, required_indices: List[str]) -> None:
         self.required_index_columns = required_indices
@@ -426,6 +434,8 @@ class FilteredVar(Var):
         cut_index_columns = self.cut.resolve_metadata(h5file)
 
         if base_index_columns == cut_index_columns:
+            # We don't have to read any index columns to evaluate this
+            # var.
             return base_index_columns
 
         if len(cut_index_columns) > len(base_index_columns):

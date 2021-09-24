@@ -8,39 +8,38 @@ import pandas as pd
 import numpy as np
 
 
-def test_filtered_var_cut_and_var_use_same_var():
+@pytest.fixture()
+def uc00() -> FilteredVar:
+    base = SimpleVar("electrons", ["pt", "eta"])
+    cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
+    return FilteredVar(base, cut)
+
+
+def test_uc00_construction(uc00: FilteredVar):
+    assert uc00.inq_result_columns() == ["pt", "eta"]
+    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electons/eta"}
+
+
+def test_filtered_var_cut_and_var_use_same_var(uc00: FilteredVar):
     """Test a FilteredVar that applies a cut to the same table from which
     the cut was calculated."""
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
-    base = SimpleVar("electrons", ["pt", "eta"])
-    cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
-    x = FilteredVar(base, cut)
-    assert x is not None
-    assert x.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
-    assert len(x.inq_datasets_read()) == 2
-    assert x.inq_tables_read() == ["electrons"]
-    assert set(x.inq_result_columns()) == {"pt", "eta"}
-    idx = x.inq_index()
+    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
+    assert len(uc00.inq_datasets_read()) == 2
+    assert uc00.inq_tables_read() == ["electrons"]
+    assert set(uc00.inq_result_columns()) == {"pt", "eta"}
+    idx = uc00.inq_index()
     assert idx is not None
     assert isinstance(idx, SimpleIndex)
     assert not idx.is_trivial
 
-    var2 = base.filter_by(cut)
-
     with h5.File("small.h5", "r") as f:
-        x.prepare(f)
+        uc00.prepare(f)
 
-        cut_df = x.eval(f)
-        assert isinstance(cut_df, pd.DataFrame)
-
-        cut_series = cut.eval(f)
-        base_df = base.eval(f)
-        cut_df2 = base_df[cut_series]
-        cut_df3 = var2.eval(f)
-
-        assert cut_df.equals(cut_df2)
-        assert cut_df.equals(cut_df3)
+        df = uc00.eval(f)
+        assert isinstance(df, pd.DataFrame)
+        #TODO: need to test contents of df
 
 
 def test_filtered_var_compatible_cut_and_var():
