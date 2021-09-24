@@ -371,7 +371,7 @@ class FilteredVar(Var):
         self.required_index_columns = None
 
     def prepare(self, f: h5.File) -> None:
-        assert !self.prepared
+        assert not self.prepared
 
         self.resolve_metadata(f)  # We are intentionally ignoring the returned value
         self.base.set_required_indices(self.required_index_columns)
