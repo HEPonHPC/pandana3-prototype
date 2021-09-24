@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Set, Callable
+from typing import List, Set, Callable, Tuple
 import pandas as pd
 import h5py as h5
 import numpy as np
@@ -17,6 +17,19 @@ from pandana3.core.grouping import Grouping
 from pandana3.core import index
 from pandana3.core.index import Index, SimpleIndex
 from pandana3.core.cut import Cut
+
+
+def common_prefix(bic, cic):
+    result = []
+    for b, c in zip(bic, cic):
+        result.append(b)
+    return result
+
+
+def determine_required(bic, cic):
+    if bic == cic:
+        return []
+    return common_prefix(bic, cic)
 
 
 def verify_type(val, typ, msg: str) -> None:
@@ -31,8 +44,21 @@ class Var(ABC):
     A Var is not, nor does it contain, a DataFrame. However, when given a file,
     it can be evaluated to yield a DataFrame."""
 
-    @abstractmethod
+    def __init__(self):
+        self.prepared = False
+        self.required_indices = []
+
     def prepare(self, f: h5.File) -> None:
+        """Prepare for evaluation of this Var. This should be called directly by the
+        user on the Var objects used directly in an analysis.
+
+        This function is not to be overridden in derived classes."""
+        assert not self.prepared
+        self._do_prepare(f)
+        self.prepared = True
+
+    @abstractmethod
+    def _do_prepare(self, f: h5.File) -> None:
         """Prepare for evaluation of this Var. This should be called directly by the
         user on the Var objects used directly in an analysis."""
         raise NotImplementedError
@@ -80,8 +106,9 @@ class Var(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        """Return the index columns this Var might have.
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
+        """Return the index columns this Var might have, and the ones it appears to need.
+        The second value is only correct for top-level Vars.
 
         Raise an exception if the Var is malformed."""
         raise NotImplementedError
@@ -158,16 +185,17 @@ class SimpleVar(Var):
         )
         if len(column_names) == 0:
             raise ValueError("column_names must be a nonempty list of strings")
+
+        super().__init__()
         self.table = table_name
         self.columns = column_names
-        self.index_columns_to_read = []
 
-    def prepare(self, f: h5.File) -> None:
+    def _do_prepare(self, f: h5.File) -> None:
         """A SimpleVar has no preparation to do."""
         pass
 
     def set_required_indices(self, required_indices: List[str]) -> None:
-        self.index_columns_to_read = required_indices
+        self.required_indices = required_indices
 
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
@@ -373,7 +401,7 @@ class FilteredVar(Var):
     def prepare(self, f: h5.File) -> None:
         assert not self.prepared
 
-        self.resolve_metadata(f)  # We are intentionally ignoring the returned value
+        _, self.required_index_columns = self.resolve_metadata(f)
         self.base.set_required_indices(self.required_index_columns)
         self.cut.set_required_indices(self.required_index_columns)
         self.set_prepared()
@@ -430,23 +458,26 @@ class FilteredVar(Var):
 
     def resolve_metadata(self, h5file: h5.File) -> List[str]:
         assert h5.File, "Attempt to resolve Var metadata with a non-open File"
-        base_index_columns = self.base.resolve_metadata(h5file)
-        cut_index_columns = self.cut.resolve_metadata(h5file)
+        base_all, _ = self.base.resolve_metadata(h5file)
+        cut_all, _ = self.cut.resolve_metadata(h5file)
 
-        if base_index_columns == cut_index_columns:
-            # We don't have to read any index columns to evaluate this
-            # var.
-            return base_index_columns
-
-        if len(cut_index_columns) > len(base_index_columns):
-            # TODO: use a custom exception type with meaningful data here
+        if check_compatible(base_all, cut_all):
             raise ValueError("FilteredVar has incompatible index columns")
 
-        common_prefix = []
+        apparently_required = determine_required(base_al, cut_all)
+        return base_all, apparently_required
+
+    @staticmethod
+    def check_compatible(
+        base_index_columns: List[str], cut_index_columns: List[str]
+    ) -> bool:
+        if base_index_columns == cut_index_columns:
+            return True
+
+        if len(cut_index_columns) > len(base_index_columns):
+            return False
+
         for b, c in zip(base_index_columns, cut_index_columns):
             if b != c:
-                raise ValueError("FilteredVar has incompatible index columns")
-            common_prefix.append(b)
-
-        self.required_index_columns = common_prefix
-        return base_index_columns
+                return False
+        return True
