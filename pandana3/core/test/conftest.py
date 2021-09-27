@@ -41,3 +41,25 @@ def fv01() -> FilteredVar:
                     lambda df: df["met"] > 10.0)
     return FilteredVar(SimpleVar("electrons", ["pt", "phi"]),
                        cut)
+
+
+@pytest.fixture()
+def fv02() -> FilteredVar:
+    v1 = SimpleVar("events", ["met"])
+    c1 = SimpleCut(v1, lambda df: df["met"] > 10.0)
+    v2 = SimpleVar("electrons", ["pt"])
+    fv1 = FilteredVar(v2, c1)
+    cut = SimpleCut(fv1, lambda df: df["pt"] > 15.0)
+    var = SimpleVar("electrons_qual", ["q1", "q2"])
+    return FilteredVar(var, cut)
+
+
+@pytest.fixture()
+def fv03() -> FilteredVar:
+    v1 = SimpleVar("events", ["met"])
+    c1 = SimpleCut(v1, lambda df: df["met"] > 10.0)
+    v2 = SimpleVar("electrons", ["pt"])
+    fv1 = FilteredVar(v2, c1)
+    cut = SimpleCut(fv1, lambda df: df["pt"] > 15.0)
+    var = SimpleVar("electrons_hits", ["energy"])
+    return FilteredVar(var, cut)

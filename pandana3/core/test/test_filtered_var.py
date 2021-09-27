@@ -38,8 +38,18 @@ def test_fv00_newly_constructed(fv00: FilteredVar, dummyfile: h5.File) -> None:
     exercise_newly_constructed(fv00, dummyfile, {"electrons"}, ["pt", "eta"])
 
 
-def test_fv01_new_constructed(fv01: FilteredVar, dummyfile: h5.File) -> None:
+def test_fv01_newly_constructed(fv01: FilteredVar, dummyfile: h5.File) -> None:
     exercise_newly_constructed(fv01, dummyfile, {"events", "electrons"}, ["pt", "phi"])
+
+
+def test_fv02_newly_constructed(fv02: FilteredVar, dummyfile: h5.File) -> None:
+    exercise_newly_constructed(fv02, dummyfile, {"events", "electrons", "electrons_qual"},
+                               ["q1", "q2"])
+
+
+def test_fv03_newly_constructed(fv03: FilteredVar, dummyfile: h5.File) -> None:
+    exercise_newly_constructed(fv03, dummyfile, {"events", "electrons", "electrons_hits"},
+                               ["energy"])
 
 
 def test_fv00_preparing(fv00: FilteredVar, datafile: h5.File) -> None:
@@ -49,6 +59,19 @@ def test_fv00_preparing(fv00: FilteredVar, datafile: h5.File) -> None:
 def test_fv01_preparing(fv01: FilteredVar, datafile: h5.File) -> None:
     exercise_preparing(fv01, datafile,
                        {"/electrons/pt", "/electrons/phi", "/electrons/evtnum", "/events/met", "/events/evtnum"})
+
+
+def test_fv02_preparing(fv02: FilteredVar, datafile: h5.File) -> None:
+    exercise_preparing(fv02, datafile,
+                       {"/events/met", "/events/evtnum", "/electrons/pt", "/electrons/evtnum",
+                        "/electrons_qual/q1", "/electrons_qual/q2", "/electrons_qual/evtnum"})
+
+
+def test_fv03_preparing(fv03: FilteredVar, datafile: h5.File) -> None:
+    exercise_preparing(fv03, datafile,
+                       {"/events/met", "/events/evtnum", "/electrons/pt", "/electrons/evtnum",
+                        "/electrons/electrons_idx",
+                        "/electrons_hits/energy", "/electrons_hits/evtnum", "/electrons_hits/electrons_idx"})
 
 
 def test_fv00_evaluating(fv00: FilteredVar, datafile: h5.File) -> None:
