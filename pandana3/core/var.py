@@ -22,7 +22,7 @@ from pandana3.core.cut import Cut
 def common_prefix(bic: List[str], cic: List[str]) -> List[str]:
     """ "Return the subsequence of bic that is in cic. It is expected that the
     test for compatibility used by FilteredVar is already done."""
-    return bic[0 : len(cic)]
+    return bic[0: len(cic)]
 
 
 def verify_type(val, typ, msg: str) -> None:
@@ -89,8 +89,8 @@ class Var(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inq_tables_read(self) -> List[str]:
-        """Return a list of tables read"""
+    def inq_tables_read(self) -> Set[str]:
+        """Return the names of the tables read"""
         raise NotImplementedError
 
     @abstractmethod
@@ -134,7 +134,7 @@ class ConstantVar(Var):
         self.col_name = name
         self.value = value
 
-    def prepare(self, f: h5.File) -> None:
+    def _do_prepare(self, f: h5.File) -> None:
         """ConstantVar has no preparation to do."""
         pass
 
@@ -146,9 +146,9 @@ class ConstantVar(Var):
         """Return the (full) names of the datasets to be read."""
         return set()
 
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         """Return a list of tables read"""
-        return []
+        return set()
 
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
@@ -212,10 +212,10 @@ class SimpleVar(Var):
         }
         return physics_datasets.union(index_datasets)
 
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         """Return a list of tables read. For a SimpleVar, the length is always
         1."""
-        return [self.table]
+        return {self.table}
 
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
@@ -256,7 +256,7 @@ class SimpleVar(Var):
             raise ValueError("column_names must be a nonempty list of strings")
         # TODO: There must be a more efficient way to do this addition.
         for name in column_names:
-            if not name in self.columns:
+            if name not in self.columns:
                 self.columns.append(name)
 
     def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
@@ -264,8 +264,8 @@ class SimpleVar(Var):
         be determined until access to the file is possible.
         """
         assert h5file, "Attempt to resolve Var metadata with a non-open File"
-        self.index_columns = h5file[self.table].attrs["index_cols"].tolist()
-        return self.index_columns, []
+        index_columns = h5file[self.table].attrs["index_cols"].tolist()
+        return index_columns, []
 
 
 class GroupedVar(Var):
@@ -288,10 +288,10 @@ class GroupedVar(Var):
     """
 
     def __init__(
-        self,
-        var: Var,
-        grouping: List[str],
-        reduction: Callable[[np.ndarray], np.float64],
+            self,
+            var: Var,
+            grouping: List[str],
+            reduction: Callable[[np.ndarray], np.float64],
     ):
         super().__init__()
         self.var = var
@@ -308,7 +308,7 @@ class GroupedVar(Var):
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         return self.var.inq_tables_read()
 
     def inq_result_columns(self) -> List[str]:
@@ -330,7 +330,7 @@ class GroupedVar(Var):
     def add_columns(self, column_names: List[str]) -> None:
         self.var.add_columns(column_names)
 
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         return super().resolve_metadata(h5file)
 
 
@@ -349,8 +349,9 @@ class MutatedVar(Var):
     """
 
     def __init__(
-        self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]
+            self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]
     ):
+        super().__init__()
         self.var = var
         self.name = name
         self.mutate = mutation
@@ -364,7 +365,7 @@ class MutatedVar(Var):
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         return self.var.inq_tables_read()
 
     def inq_result_columns(self) -> List[str]:
@@ -389,7 +390,7 @@ class MutatedVar(Var):
         temp[self.name] = self.mutate(temp)
         return temp
 
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         return super().resolve_metadata(h5file)
 
 
@@ -433,12 +434,9 @@ class FilteredVar(Var):
         # order; we should not care about the order.
         return set(all_datasets)
 
-    def inq_tables_read(self) -> List[str]:
-        """Return a list of tables read"""
-        all_tables = self.base.inq_tables_read() + self.cut.inq_tables_read()
-        # We want to remove any duplicates from the list. Note that this does not preserve
-        # order; we should not care about the order.
-        return list(set(all_tables))
+    def inq_tables_read(self) -> Set[str]:
+        """Return a set of tables read"""
+        return self.base.inq_tables_read() | self.cut.inq_tables_read()
 
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
@@ -479,7 +477,7 @@ class FilteredVar(Var):
 
     @staticmethod
     def check_compatible(
-        base_index_columns: List[str], cut_index_columns: List[str]
+            base_index_columns: List[str], cut_index_columns: List[str]
     ) -> bool:
         if base_index_columns == cut_index_columns:
             return True

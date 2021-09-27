@@ -18,7 +18,7 @@ def test_constructed_is_not_prepared(c00: SimpleCut) -> None:
 
 
 def test_tables_read(c00: SimpleCut) -> None:
-    assert c00.inq_tables_read() == ["electrons"]
+    assert c00.inq_tables_read() == {"electrons"}
 
 
 def test_prepare(c00: SimpleCut, datafile: h5.File) -> None:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 import pytest
 import h5py as h5
-from pandana3.core.var import SimpleVar
+import numpy as np
+from pandana3.core.var import SimpleVar, FilteredVar
+from pandana3.core.cut import SimpleCut
 
 
 @pytest.fixture(scope="session")
@@ -24,3 +26,18 @@ def datafile() -> h5.File:
 @pytest.fixture()
 def sv00() -> SimpleVar:
     return SimpleVar("electrons", ["pt", "eta"])
+
+
+@pytest.fixture()
+def fv00() -> FilteredVar:
+    base = SimpleVar("electrons", ["pt", "eta"])
+    cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
+    return FilteredVar(base, cut)
+
+
+@pytest.fixture()
+def fv01() -> FilteredVar:
+    cut = SimpleCut(SimpleVar("events", ["met"]),
+                    lambda df: df["met"] > 10.0)
+    return FilteredVar(SimpleVar("electrons", ["pt", "phi"]),
+                       cut)

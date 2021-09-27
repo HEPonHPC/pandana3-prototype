@@ -54,7 +54,7 @@ class Cut(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         """Return the names of tables that will be read by this cut."""
         raise NotImplementedError
 
@@ -92,13 +92,14 @@ class SimpleCut(Cut):
         self.base.prepare(f)
 
     def set_prepared(self) -> None:
+        self.base.set_prepared()
         self.prepared = True
 
     def _do_inq_datasets_read(self) -> Set[str]:
         """"A SimpleCut reads the datasets from it's contained Var."""
         return self.base.inq_datasets_read()
 
-    def inq_tables_read(self) -> List[str]:
+    def inq_tables_read(self) -> Set[str]:
         return self.base.inq_tables_read()
 
     def inq_index(self) -> Index:

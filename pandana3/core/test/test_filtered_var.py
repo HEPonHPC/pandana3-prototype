@@ -1,18 +1,29 @@
+from __future__ import annotations
 import pytest
-from pandana3.core.var import SimpleVar, FilteredVar
-from pandana3.core.cut import SimpleCut
-from pandana3.core.index import SimpleIndex
-from pandana3.core.grouping import Grouping
+from typing import List, Set
 import h5py as h5
 import pandas as pd
 import numpy as np
+from pandana3.core.var import Var, SimpleVar, FilteredVar
+from pandana3.core.cut import SimpleCut
+from pandana3.core.index import SimpleIndex
+from pandana3.core.grouping import Grouping
 
 
-@pytest.fixture()
-def fv00() -> FilteredVar:
-    base = SimpleVar("electrons", ["pt", "eta"])
-    cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
-    return FilteredVar(base, cut)
+def exercise_newly_constructed(var: Var, f: h5.File, expected_tablenames: Set[str],
+                               expected_result_columns: List[str]) -> None:
+    assert not var.prepared
+    assert var.inq_tables_read() == expected_tablenames
+    assert var.inq_result_columns() == expected_result_columns
+    with pytest.raises(AssertionError):
+        var.eval(f)
+
+
+def exercise_preparing(var: Var, f: h5.File, expected_datasets_read: Set[str]) -> None:
+    assert not var.prepared
+    var.prepare(f)
+    assert var.prepared
+    assert var.inq_datasets_read() == expected_datasets_read
 
 
 def test_check_compatible():
@@ -23,32 +34,21 @@ def test_check_compatible():
     assert not FilteredVar.check_compatible(["a"], ["a", "b"])
 
 
-def test_fv00_construction_result_columns(fv00: FilteredVar) -> None:
-    assert fv00.inq_result_columns() == ["pt", "eta"]
-
-
-def test_fv00_construction_datasets_read(fv00: FilteredVar) -> None:
-    with pytest.raises(AssertionError):
-        fv00.inq_datasets_read()
-
-
-def test_fv00_prepare_sets_state(fv00: FilteredVar, datafile: h5.File) -> None:
-    fv00.prepare(datafile)
-    assert fv00.prepared
-
-
 def test_fv00_newly_constructed(fv00: FilteredVar, dummyfile: h5.File) -> None:
-    assert not fv00.prepared
-    assert fv00.inq_tables_read() == ["electrons"]
-    assert fv00.inq_result_columns() == ["pt", "eta"]
-    with pytest.raises(AssertionError):
-        fv00.eval(dummyfile)
+    exercise_newly_constructed(fv00, dummyfile, {"electrons"}, ["pt", "eta"])
+
+
+def test_fv01_new_constructed(fv01: FilteredVar, dummyfile: h5.File) -> None:
+    exercise_newly_constructed(fv01, dummyfile, {"events", "electrons"}, ["pt", "phi"])
 
 
 def test_fv00_preparing(fv00: FilteredVar, datafile: h5.File) -> None:
-    fv00.prepare(datafile)
-    assert fv00.prepared
-    assert fv00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
+    exercise_preparing(fv00, datafile, {"/electrons/pt", "/electrons/eta"})
+
+
+def test_fv01_preparing(fv01: FilteredVar, datafile: h5.File) -> None:
+    exercise_preparing(fv01, datafile,
+                       {"/electrons/pt", "/electrons/phi", "/electrons/evtnum", "/events/met", "/events/evtnum"})
 
 
 def test_fv00_evaluating(fv00: FilteredVar, datafile: h5.File) -> None:
@@ -57,14 +57,16 @@ def test_fv00_evaluating(fv00: FilteredVar, datafile: h5.File) -> None:
     assert isinstance(df, pd.DataFrame)
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
-    assert fv00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
-    assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["pt", "eta"]
     assert len(df) == 18
 
 
-def test_fv01_evaluating(uc01: FilteredVar, datafile: h5.File) -> None:
-    pass
+def test_fv01_evaluating(fv01: FilteredVar, datafile: h5.File) -> None:
+    fv01.prepare(datafile)
+    df = fv01.eval(datafile)
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["pt", "phi"]
+    assert len(df) == 24
 
 
 def test_filtered_var_compatible_cut_and_var():

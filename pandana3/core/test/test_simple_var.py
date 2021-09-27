@@ -39,7 +39,7 @@ def test_newly_constructed_indices(sv00: SimpleVar) -> None:
 
 def test_sv00_newly_constructed(sv00: SimpleVar, dummyfile: h5.File) -> None:
     assert not sv00.prepared
-    assert sv00.inq_tables_read() == ["electrons"]
+    assert sv00.inq_tables_read() == {"electrons"}
     assert sv00.inq_result_columns() == ["pt", "eta"]
     with pytest.raises(AssertionError):
         sv00.eval(dummyfile)
