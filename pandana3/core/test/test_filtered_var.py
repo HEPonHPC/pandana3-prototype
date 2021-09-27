@@ -9,7 +9,7 @@ import numpy as np
 
 
 @pytest.fixture()
-def uc00() -> FilteredVar:
+def fv00() -> FilteredVar:
     base = SimpleVar("electrons", ["pt", "eta"])
     cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)
     return FilteredVar(base, cut)
@@ -23,47 +23,47 @@ def test_check_compatible():
     assert not FilteredVar.check_compatible(["a"], ["a", "b"])
 
 
-def test_uc00_construction_result_columns(uc00: FilteredVar) -> None:
-    assert uc00.inq_result_columns() == ["pt", "eta"]
+def test_fv00_construction_result_columns(fv00: FilteredVar) -> None:
+    assert fv00.inq_result_columns() == ["pt", "eta"]
 
 
-def test_uc00_construction_datasets_read(uc00: FilteredVar) -> None:
+def test_fv00_construction_datasets_read(fv00: FilteredVar) -> None:
     with pytest.raises(AssertionError):
-        uc00.inq_datasets_read()
+        fv00.inq_datasets_read()
 
 
-def test_uc00_prepare_sets_state(uc00: FilteredVar, datafile: h5.File) -> None:
-    uc00.prepare(datafile)
-    assert uc00.prepared
+def test_fv00_prepare_sets_state(fv00: FilteredVar, datafile: h5.File) -> None:
+    fv00.prepare(datafile)
+    assert fv00.prepared
 
 
-def test_uc00_newly_constructed(uc00: FilteredVar, dummyfile: h5.File) -> None:
-    assert not uc00.prepared
-    assert uc00.inq_tables_read() == ["electrons"]
-    assert uc00.inq_result_columns() == ["pt", "eta"]
+def test_fv00_newly_constructed(fv00: FilteredVar, dummyfile: h5.File) -> None:
+    assert not fv00.prepared
+    assert fv00.inq_tables_read() == ["electrons"]
+    assert fv00.inq_result_columns() == ["pt", "eta"]
     with pytest.raises(AssertionError):
-        uc00.eval(dummyfile)
+        fv00.eval(dummyfile)
 
 
-def test_uc00_preparing(uc00: FilteredVar, datafile: h5.File) -> None:
-    uc00.prepare(datafile)
-    assert uc00.prepared
-    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
+def test_fv00_preparing(fv00: FilteredVar, datafile: h5.File) -> None:
+    fv00.prepare(datafile)
+    assert fv00.prepared
+    assert fv00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
 
 
-def test_uc00_evaluating(uc00: FilteredVar, datafile: h5.File) -> None:
-    uc00.prepare(datafile)
-    df = uc00.eval(datafile)
+def test_fv00_evaluating(fv00: FilteredVar, datafile: h5.File) -> None:
+    fv00.prepare(datafile)
+    df = fv00.eval(datafile)
     assert isinstance(df, pd.DataFrame)
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
-    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
+    assert fv00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["pt", "eta"]
     assert len(df) == 18
 
 
-def test_uc01_evaluating(uc01: FilteredVar, datafile: h5.File) -> None:
+def test_fv01_evaluating(uc01: FilteredVar, datafile: h5.File) -> None:
     pass
 
 
