@@ -5,13 +5,35 @@
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Set, Callable
+from typing import List, Set, Callable, Tuple
 import h5py as h5
 import pandas as pd
 from pandana3.core.index import Index
 
 
 class Cut(ABC):
+    def __init__(self):
+        self.prepared = False
+
+    def prepare(self, f: h5.File) -> None:
+        """Prepare for evaluation of this Var. This should be called directly by the
+        user on the Var objects used directly in an analysis.
+
+        This method is not to be overridden in derived classes."""
+        assert not self.prepared
+        self._do_prepare(f)
+        self.prepared = True
+
+    @abstractmethod
+    def _do_prepare(self, f: h5.File) -> None:
+        raise NotImplementedError
+
+    def set_prepared(self) -> None:
+        """Record this this Cut has been prepared.
+
+        Derived classes should override this if they have special processing to do."""
+        self.prepared = True
+
     @abstractmethod
     def eval(self, f: h5.File) -> pd.Series:
         """ " Evaluate the Cut using data supplied b the given file f, returning a
@@ -19,8 +41,15 @@ class Cut(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def inq_datasets_read(self) -> Set[str]:
+        """Return the (full) names of the datasets to be read.
+
+        This method is not to be overridden in derived classes."""
+        assert self.prepared
+        return self._do_inq_datasets_read()
+
+    @abstractmethod
+    def _do_inq_datasets_read(self) -> Set[str]:
         """Return the full names of the datasets that will be read by this cut."""
         raise NotImplementedError
 
@@ -34,8 +63,8 @@ class Cut(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
-        return []
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
+        return [], []
 
     @abstractmethod
     def set_required_indices(self, required_indices: List[str]) -> None:
@@ -54,10 +83,19 @@ class SimpleCut(Cut):
         # but that introduces a circular dependency between cut.py and var.py.
         from pandana3.core.var import Var
 
+        super().__init__()
+
         self.base: Var = base
         self.predicate = predicate
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_prepare(self, f: h5.File) -> None:
+        self.base.prepare(f)
+
+    def set_prepared(self) -> None:
+        self.prepared = True
+
+    def _do_inq_datasets_read(self) -> Set[str]:
+        """"A SimpleCut reads the datasets from it's contained Var."""
         return self.base.inq_datasets_read()
 
     def inq_tables_read(self) -> List[str]:
@@ -75,7 +113,7 @@ class SimpleCut(Cut):
         full = self.base.eval(f)
         return self.predicate(full)
 
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         return self.base.resolve_metadata(h5file)
 
     def set_required_indices(self, required_indices: List[str]) -> None:

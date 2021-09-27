@@ -19,17 +19,10 @@ from pandana3.core.index import Index, SimpleIndex
 from pandana3.core.cut import Cut
 
 
-def common_prefix(bic, cic):
-    result = []
-    for b, c in zip(bic, cic):
-        result.append(b)
-    return result
-
-
-def determine_required(bic, cic):
-    if bic == cic:
-        return []
-    return common_prefix(bic, cic)
+def common_prefix(bic: List[str], cic: List[str]) -> List[str]:
+    """ "Return the subsequence of bic that is in cic. It is expected that the
+    test for compatibility used by FilteredVar is already done."""
+    return bic[0 : len(cic)]
 
 
 def verify_type(val, typ, msg: str) -> None:
@@ -55,23 +48,44 @@ class Var(ABC):
         This function is not to be overridden in derived classes."""
         assert not self.prepared
         self._do_prepare(f)
-        self.prepared = True
+        self.set_prepared()
 
     @abstractmethod
     def _do_prepare(self, f: h5.File) -> None:
-        """Prepare for evaluation of this Var. This should be called directly by the
-        user on the Var objects used directly in an analysis."""
+        """Do the preparation work necessary for this concrete Var type.
+
+        This should not be called by any code outside of the Var base class."""
         raise NotImplementedError
 
-    @abstractmethod
+    def set_prepared(self):
+        """Record that this Var has been prepared.
+
+        Derived classes should override this if they have special handling to do."""
+        self.prepared = True
+
     def set_required_indices(self, required_indices: List[str]) -> None:
         """Set the list of index columns that must be read during the
-        evaluation of this Var."""
-        raise NotImplementedError
+        evaluation of this Var.
+
+        This method is not to be overridden in derived classes."""
+        assert not self.prepared
+        self._do_set_required_indices(required_indices)
+        self.required_indices = required_indices
 
     @abstractmethod
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
+        raise NotImplementedError
+
     def inq_datasets_read(self) -> Set[str]:
-        """Return the (full) names of the datasets to be read."""
+        """Return the (full) names of the datasets to be read.
+
+        This method is not to be overridden in derived classes."""
+        assert self.prepared
+        return self._do_inq_datasets_read()
+
+    @abstractmethod
+    def _do_inq_datasets_read(self) -> Set[str]:
+        """"Return the full name of all datasets read when evaluating this var."""
         raise NotImplementedError
 
     @abstractmethod
@@ -85,24 +99,15 @@ class Var(ABC):
         evaluation."""
         raise NotImplementedError
 
-    @abstractmethod
-    def inq_index(self) -> Index:
-        """Return the Index to be used for this Var."""
-        raise NotImplementedError
+    def eval(self, f: h5.File) -> pd.DataFrame:
+        assert self.prepared
+        assert f
+        assert f.mode == "r"
+        return self._do_eval(f)
 
     @abstractmethod
-    def inq_grouping(self) -> Grouping:
-        """Return the Grouping used for this Var."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         """Return the DataFrame represented by this Var."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def add_columns(self, column_names: List[str]) -> None:
-        """Add one or more new columns to be read."""
         raise NotImplementedError
 
     @abstractmethod
@@ -125,10 +130,11 @@ class ConstantVar(Var):
     """
 
     def __init__(self, name: str, value: float):
+        super().__init__()
         self.col_name = name
         self.value = value
 
-    def prepare(self, f: h5.file) -> None:
+    def prepare(self, f: h5.File) -> None:
         """ConstantVar has no preparation to do."""
         pass
 
@@ -191,19 +197,20 @@ class SimpleVar(Var):
         self.columns = column_names
 
     def _do_prepare(self, f: h5.File) -> None:
-        """A SimpleVar has no preparation to do."""
+        """A SimpleVar has no extra preparation to do."""
         pass
 
-    def set_required_indices(self, required_indices: List[str]) -> None:
-        self.required_indices = required_indices
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
+        """SimpleVar has no work other than what the base does."""
+        pass
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         physics_datasets = {f"/{self.table}/{col_name}" for col_name in self.columns}
         index_datasets = {
-            f"/{self.table}/{col_name}" for col_name in self.index_columns_to_read
+            f"/{self.table}/{col_name}" for col_name in self.required_indices
         }
-        return physics_datasets.update(index_datasets)
+        return physics_datasets.union(index_datasets)
 
     def inq_tables_read(self) -> List[str]:
         """Return a list of tables read. For a SimpleVar, the length is always
@@ -225,7 +232,7 @@ class SimpleVar(Var):
         and so returns a Grouping that is fundamental."""
         return Grouping(column_names=None)
 
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         """Evaluate the Var by reading all the required data from the given
         h5.File object.
 
@@ -252,13 +259,13 @@ class SimpleVar(Var):
             if not name in self.columns:
                 self.columns.append(name)
 
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         """Use the specified file f to fill out the metadata that can not
         be determined until access to the file is possible.
         """
         assert h5file, "Attempt to resolve Var metadata with a non-open File"
         self.index_columns = h5file[self.table].attrs["index_cols"].tolist()
-        return self.index_columns
+        return self.index_columns, []
 
 
 class GroupedVar(Var):
@@ -286,6 +293,7 @@ class GroupedVar(Var):
         grouping: List[str],
         reduction: Callable[[np.ndarray], np.float64],
     ):
+        super().__init__()
         self.var = var
         self.var.add_columns(grouping)
         self.grouping = Grouping(grouping)
@@ -295,7 +303,7 @@ class GroupedVar(Var):
         return super().prepare(f)
 
     def set_required_indices(self, required_indices: List[str]) -> None:
-        return super().set_required_indices(required_indices)
+        raise NotImplementedError
 
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
@@ -305,9 +313,6 @@ class GroupedVar(Var):
 
     def inq_result_columns(self) -> List[str]:
         raise NotImplementedError("GroupedVar inq_result_columns is not implemented.")
-
-    def inq_index(self) -> Index:
-        return self.var.inq_index()
 
     def inq_grouping(self) -> Grouping:
         return self.grouping
@@ -354,7 +359,7 @@ class MutatedVar(Var):
         return super().prepare(f)
 
     def set_required_indices(self, required_indices: List[str]) -> None:
-        return super().set_required_indices(required_indices)
+        raise NotImplementedError
 
     def inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
@@ -392,29 +397,34 @@ class FilteredVar(Var):
     """A FilteredVar is the result of applying a cut to another Var."""
 
     def __init__(self, base: Var, cut: Cut):
+        super().__init__()
         assert isinstance(base, Var)
         assert isinstance(cut, Cut)
         self.base = base
         self.cut = cut
-        self.required_index_columns = None
 
-    def prepare(self, f: h5.File) -> None:
-        assert not self.prepared
+    @staticmethod
+    def determine_required(bic: List[str], cic: List[str]) -> List[str]:
+        """Given two lists of index column names,"""
+        if bic == cic:
+            return []
+        return common_prefix(bic, cic)
 
+    def _do_prepare(self, f: h5.File) -> None:
         _, self.required_index_columns = self.resolve_metadata(f)
         self.base.set_required_indices(self.required_index_columns)
         self.cut.set_required_indices(self.required_index_columns)
-        self.set_prepared()
 
     def set_prepared(self) -> None:
         self.base.set_prepared()
         self.cut.set_prepared()
         self.prepared = True
 
-    def set_required_indices(self, required_indices: List[str]) -> None:
-        self.required_index_columns = required_indices
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
+        self.base.set_required_indices(required_indices)
+        self.cut.set_required_indices(required_indices)
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         all_datasets = set.union(
             self.base.inq_datasets_read(), self.cut.inq_datasets_read()
@@ -445,7 +455,7 @@ class FilteredVar(Var):
         """Return the Grouping used for this Var."""
         return self.base.inq_grouping()
 
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         # TODO: Optimize this so that we don't evaluate
         # the vars involved more than once each.
         tmp = self.base.eval(h5file)
@@ -461,10 +471,10 @@ class FilteredVar(Var):
         base_all, _ = self.base.resolve_metadata(h5file)
         cut_all, _ = self.cut.resolve_metadata(h5file)
 
-        if check_compatible(base_all, cut_all):
+        if not self.check_compatible(base_all, cut_all):
             raise ValueError("FilteredVar has incompatible index columns")
 
-        apparently_required = determine_required(base_al, cut_all)
+        apparently_required = self.determine_required(base_all, cut_all)
         return base_all, apparently_required
 
     @staticmethod

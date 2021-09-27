@@ -1,5 +1,5 @@
 import pytest
-from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
+from pandana3.core.var import SimpleVar, FilteredVar
 from pandana3.core.cut import SimpleCut
 from pandana3.core.index import SimpleIndex
 from pandana3.core.grouping import Grouping
@@ -15,31 +15,56 @@ def uc00() -> FilteredVar:
     return FilteredVar(base, cut)
 
 
-def test_uc00_construction(uc00: FilteredVar):
+def test_check_compatible():
+    assert FilteredVar.check_compatible(["a", "b"], ["a"])
+    assert FilteredVar.check_compatible([], [])
+    assert FilteredVar.check_compatible(["a"], ["a"])
+    assert not FilteredVar.check_compatible(["a"], ["b"])
+    assert not FilteredVar.check_compatible(["a"], ["a", "b"])
+
+
+def test_uc00_construction_result_columns(uc00: FilteredVar) -> None:
     assert uc00.inq_result_columns() == ["pt", "eta"]
-    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electons/eta"}
 
 
-def test_filtered_var_cut_and_var_use_same_var(uc00: FilteredVar):
-    """Test a FilteredVar that applies a cut to the same table from which
-    the cut was calculated."""
+def test_uc00_construction_datasets_read(uc00: FilteredVar) -> None:
+    with pytest.raises(AssertionError):
+        uc00.inq_datasets_read()
+
+
+def test_uc00_prepare_sets_state(uc00: FilteredVar, datafile: h5.File) -> None:
+    uc00.prepare(datafile)
+    assert uc00.prepared
+
+
+def test_uc00_newly_constructed(uc00: FilteredVar, dummyfile: h5.File) -> None:
+    assert not uc00.prepared
+    assert uc00.inq_tables_read() == ["electrons"]
+    assert uc00.inq_result_columns() == ["pt", "eta"]
+    with pytest.raises(AssertionError):
+        uc00.eval(dummyfile)
+
+
+def test_uc00_preparing(uc00: FilteredVar, datafile: h5.File) -> None:
+    uc00.prepare(datafile)
+    assert uc00.prepared
+    assert uc00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
+
+
+def test_uc00_evaluating(uc00: FilteredVar, datafile: h5.File) -> None:
+    uc00.prepare(datafile)
+    df = uc00.eval(datafile)
+    assert isinstance(df, pd.DataFrame)
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
     assert uc00.inq_datasets_read() == {"/electrons/pt", "/electrons/eta"}
-    assert len(uc00.inq_datasets_read()) == 2
-    assert uc00.inq_tables_read() == ["electrons"]
-    assert set(uc00.inq_result_columns()) == {"pt", "eta"}
-    idx = uc00.inq_index()
-    assert idx is not None
-    assert isinstance(idx, SimpleIndex)
-    assert not idx.is_trivial
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["pt", "eta"]
+    assert len(df) == 18
 
-    with h5.File("small.h5", "r") as f:
-        uc00.prepare(f)
 
-        df = uc00.eval(f)
-        assert isinstance(df, pd.DataFrame)
-        # TODO: need to test contents of df
+def test_uc01_evaluating(uc01: FilteredVar, datafile: h5.File) -> None:
+    pass
 
 
 def test_filtered_var_compatible_cut_and_var():
@@ -93,7 +118,7 @@ def test_filtered_var_three():
     # Select events that are interesting (met > 10)
     # Select electron pt, eta that are in events that are interesting.
     events = SimpleVar("events", ["met"])
-    events.index_columns_to_read == []
+    assert events.required_indices == []
     good_events = SimpleCut(events, lambda df: df["met"] > 10.0)
     electrons = SimpleVar("electrons", ["pt", "eta"])
     good_electrons = FilteredVar(electrons, good_events)
@@ -102,7 +127,7 @@ def test_filtered_var_three():
     with h5.File("small.h5", "r") as f:
         good_electrons.prepare(f)
         assert good_electrons.required_index_columns == ["evtnum"]
-        assert events.index_columns_to_read == ["evtnum"]
+        assert events.required_indices == ["evtnum"]
 
         column_names = good_electrons.resolve_metadata(f)
         assert column_names == ["evtnum", "electrons_idx"]
@@ -129,6 +154,3 @@ def test_doubly_filtered_var():
     fv2 = FilteredVar(v3, c2)
 
     assert isinstance(fv2, FilteredVar)
-
-    with h5.File("small.h5", "r") as f:
-        index_column_names = fv2.resolve_metadata(f)
