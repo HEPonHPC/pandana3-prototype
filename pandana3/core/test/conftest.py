@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pytest
 import h5py as h5
+from pandana3.core.var import SimpleVar
 
 
 @pytest.fixture(scope="session")
@@ -18,3 +19,8 @@ def datafile() -> h5.File:
     f = h5.File("small.h5", "r")
     yield f
     f.close()
+
+
+@pytest.fixture()
+def sv00() -> SimpleVar:
+    return SimpleVar("electrons", ["pt", "eta"])

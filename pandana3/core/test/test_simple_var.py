@@ -5,11 +5,6 @@ import pandas as pd
 from pandana3.core.var import SimpleVar
 
 
-@pytest.fixture()
-def sv00() -> SimpleVar:
-    return SimpleVar("electrons", ["pt", "eta"])
-
-
 def test_multiple_table_names():
     with pytest.raises(TypeError):
         _ = SimpleVar(["electrons", "muons"], ["pt"])
