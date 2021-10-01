@@ -9,14 +9,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Set, Callable, Tuple
+from typing import List, Set, Callable, Tuple, final
 import pandas as pd
 import h5py as h5
 import numpy as np
-from pandana3.core.grouping import Grouping
-from pandana3.core import index
-from pandana3.core.index import Index, SimpleIndex
 from pandana3.core.cut import Cut
+
+# IndexInfoType is the type returned from Var.resolve_metadata
+IndexInfoType = Tuple[List[str], List[str]]
 
 
 def common_prefix(bic: List[str], cic: List[str]) -> List[str]:
@@ -38,9 +38,15 @@ class Var(ABC):
     it can be evaluated to yield a DataFrame."""
 
     def __init__(self):
+        """The base class Var contains the data common to all Vars:
+             prepared: the current state of the Var
+             required_indices: the names of the index columns that are required
+                  to evaluate this Var in the context in which it is used.
+        """
         self.prepared = False
-        self.required_indices = []
+        self.required_indices: List[str] = []
 
+    @final
     def prepare(self, f: h5.File) -> None:
         """Prepare for evaluation of this Var. This should be called directly by the
         user on the Var objects used directly in an analysis.
@@ -61,8 +67,10 @@ class Var(ABC):
         """Record that this Var has been prepared.
 
         Derived classes should override this if they have special handling to do."""
+        # TODO: Consider using the Template Method pattern here.
         self.prepared = True
 
+    @final
     def set_required_indices(self, required_indices: List[str]) -> None:
         """Set the list of index columns that must be read during the
         evaluation of this Var.
@@ -76,6 +84,7 @@ class Var(ABC):
     def _do_set_required_indices(self, required_indices: List[str]) -> None:
         raise NotImplementedError
 
+    @final
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read.
 
@@ -99,7 +108,11 @@ class Var(ABC):
         evaluation."""
         raise NotImplementedError
 
+    @final
     def eval(self, f: h5.File) -> pd.DataFrame:
+        """Return the pd.DataFrame that is represented by this Var.
+
+        This method should not be overridden by derived classes."""
         assert self.prepared
         assert f
         assert f.mode == "r"
@@ -107,20 +120,24 @@ class Var(ABC):
 
     @abstractmethod
     def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
-        """Return the DataFrame represented by this Var."""
+        """Return the DataFrame represented by this Var.
+
+        Derived classes implement this method to perform the action that is
+        the defining behavior for that class."""
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
+    def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         """Return the index columns this Var might have, and the ones it appears to need.
         The second value is only correct for top-level Vars.
 
         Raise an exception if the Var is malformed."""
         raise NotImplementedError
 
+    @final
     def filter_by(self, cut: Cut) -> FilteredVar:
         """Return a FilteredVar that uses self as a base, and applies
-        the given cut."""
+        the given Cut."""
         return FilteredVar(self, cut)
 
 
@@ -138,11 +155,11 @@ class ConstantVar(Var):
         """ConstantVar has no preparation to do."""
         pass
 
-    def set_required_indices(self, required_indices: List[str]) -> None:
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
         """ConstantVar has no indices to read."""
         pass
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
         return set()
 
@@ -155,25 +172,15 @@ class ConstantVar(Var):
         evaluation."""
         return [self.col_name]
 
-    def inq_index(self) -> Index:
-        """Return the Index to be used for this Var."""
-        return SimpleIndex()
-
-    def inq_grouping(self) -> Grouping:
-        """Return the Grouping used for this Var."""
-        return Grouping()
-
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
+        """ConstantVars return a pd.DataFrame carrying the single value
+        that was provided at construction time."""
         result = pd.DataFrame({self.col_name: np.array([self.value])})
         return result
 
-    def add_columns(self, column_names: List[str]):
-        """Add a new columns to be read."""
-        raise TypeError("you can't add columns to a ConstVar")
-
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         # ConstantVars do not have any metadata to resolve
-        return []
+        return [], []
 
 
 class SimpleVar(Var):
@@ -222,42 +229,24 @@ class SimpleVar(Var):
         evaluation. For a SimpleVar, this is always the same as the columns."""
         return self.columns
 
-    def inq_index(self) -> Index:
-        """Return the Index to be used for this Var. For a SimpleVar, this is
-        always a trivial SimpleIndex, because we're reading all the rows."""
-        return SimpleIndex()
-
-    def inq_grouping(self) -> Grouping:
-        """Return the Grouping used for this Var. A SimpleVar is ungrouped,
-        and so returns a Grouping that is fundamental."""
-        return Grouping(column_names=None)
-
     def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         """Evaluate the Var by reading all the required data from the given
         h5.File object.
 
         In this first version, we have no limitation on the rows read; this
         always reads all rows."""
-        assert h5file, "Attempt to evaluate a Var with a non-open File"
+
         # TODO: Replace this dictionary comprehension by something that will raise an
         # exception indicating which column(s) could not be found.
         try:
-            data = {name: h5file[f"/{self.table}/{name}"] for name in self.columns}
+            all_column_names = self.columns + self.required_indices
+            data = {col_name: h5file[f"/{self.table}/{col_name}"] for col_name in all_column_names}
         except KeyError as k:
             raise ValueError("Unable to find requested column in HDF5 file") from k
         result = pd.DataFrame(data)
+        if len(self.required_indices) != 0:
+            result.set_index(self.required_indices, inplace=True)
         return result
-
-    def add_columns(self, column_names: List[str]) -> None:
-        """Add a new columns to be read."""
-        if not isinstance(column_names, list):
-            raise TypeError("column_names must be a nonempty list of strings")
-        if len(column_names) == 0:
-            raise ValueError("column_names must be a nonempty list of strings")
-        # TODO: There must be a more efficient way to do this addition.
-        for name in column_names:
-            if name not in self.columns:
-                self.columns.append(name)
 
     def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         """Use the specified file f to fill out the metadata that can not
@@ -295,42 +284,35 @@ class GroupedVar(Var):
     ):
         super().__init__()
         self.var = var
-        self.var.add_columns(grouping)
-        self.grouping = Grouping(grouping)
+        self.grouping = grouping
         self.reduction = reduction
 
-    def prepare(self, f: h5.File) -> None:
+    def _do_prepare(self, f: h5.File) -> None:
         return super().prepare(f)
 
-    def set_required_indices(self, required_indices: List[str]) -> None:
-        raise NotImplementedError
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
+        return super()._do_set_required_indices(required_indices)
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
     def inq_tables_read(self) -> Set[str]:
         return self.var.inq_tables_read()
 
     def inq_result_columns(self) -> List[str]:
-        raise NotImplementedError("GroupedVar inq_result_columns is not implemented.")
+        super().inq_result_columns()
 
-    def inq_grouping(self) -> Grouping:
-        return self.grouping
-
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         temp = self.var.eval(h5file)
         # TODO: Is it more efficient to have the resulting dataframe carry the index?
         # TODO: Is it better to sort, or not to sort? Our data comes already sorted.
-        return temp.groupby(self.grouping.column_names, as_index=False, sort=False).agg(
+        return temp.groupby(self.grouping, as_index=False, sort=False).agg(
             self.reduction
         )
         # TODO: Some aggregation functions are directly callable on the grouped dataframe.
         # We may want special handling for them.
 
-    def add_columns(self, column_names: List[str]) -> None:
-        self.var.add_columns(column_names)
-
-    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
+    def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         return super().resolve_metadata(h5file)
 
 
@@ -356,13 +338,13 @@ class MutatedVar(Var):
         self.name = name
         self.mutate = mutation
 
-    def prepare(self, f: h5.File) -> None:
+    def _do_prepare(self, f: h5.File) -> None:
         return super().prepare(f)
 
-    def set_required_indices(self, required_indices: List[str]) -> None:
-        raise NotImplementedError
+    def _do_set_required_indices(self, required_indices: List[str]) -> None:
+        super()._do_set_required_indices(required_indices)
 
-    def inq_datasets_read(self) -> Set[str]:
+    def _do_inq_datasets_read(self) -> Set[str]:
         return self.var.inq_datasets_read()
 
     def inq_tables_read(self) -> Set[str]:
@@ -372,16 +354,7 @@ class MutatedVar(Var):
         original_columns = self.var.inq_result_columns()
         return original_columns + [self.name]
 
-    def inq_index(self) -> Index:
-        return self.var.inq_index()
-
-    def inq_grouping(self) -> Grouping:
-        return self.var.inq_grouping()
-
-    def add_columns(self, column_names: List[str]) -> None:
-        self.var.add_columns(column_names)
-
-    def eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         temp = self.var.eval(h5file)
 
         # TODO: Do we want to return the computed frame or append the result
@@ -390,7 +363,7 @@ class MutatedVar(Var):
         temp[self.name] = self.mutate(temp)
         return temp
 
-    def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
+    def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         return super().resolve_metadata(h5file)
 
 
@@ -412,9 +385,9 @@ class FilteredVar(Var):
         return common_prefix(bic, cic)
 
     def _do_prepare(self, f: h5.File) -> None:
-        _, self.required_index_columns = self.resolve_metadata(f)
-        self.base.set_required_indices(self.required_index_columns)
-        self.cut.set_required_indices(self.required_index_columns)
+        _, self.required_indices = self.resolve_metadata(f)
+        self.base.set_required_indices(self.required_indices)
+        self.cut.set_required_indices(self.required_indices)
 
     def set_prepared(self) -> None:
         self.base.set_prepared()
@@ -443,16 +416,6 @@ class FilteredVar(Var):
         evaluation."""
         return self.base.inq_result_columns()
 
-    def inq_index(self) -> Index:
-        """Return the Index to be used for this Var."""
-        cut_idx = self.cut.inq_index()
-        base_idx = self.base.inq_index()
-        return index.make_index(base_idx, cut_idx)
-
-    def inq_grouping(self) -> Grouping:
-        """Return the Grouping used for this Var."""
-        return self.base.inq_grouping()
-
     def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         # TODO: Optimize this so that we don't evaluate
         # the vars involved more than once each.
@@ -464,7 +427,7 @@ class FilteredVar(Var):
         """Add a new columns to be read."""
         raise NotImplementedError("We don't know how to add columns to a FilteredVar")
 
-    def resolve_metadata(self, h5file: h5.File) -> List[str]:
+    def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         assert h5.File, "Attempt to resolve Var metadata with a non-open File"
         base_all, _ = self.base.resolve_metadata(h5file)
         cut_all, _ = self.cut.resolve_metadata(h5file)

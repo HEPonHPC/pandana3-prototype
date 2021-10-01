@@ -23,7 +23,8 @@ def exercise_preparing(var: Var, f: h5.File, expected_datasets_read: Set[str]) -
     assert not var.prepared
     var.prepare(f)
     assert var.prepared
-    assert var.inq_datasets_read() == expected_datasets_read
+    datasets_read = var.inq_datasets_read()
+    assert datasets_read == expected_datasets_read
 
 
 def test_check_compatible():
@@ -151,7 +152,7 @@ def test_filtered_var_three():
 
     with h5.File("small.h5", "r") as f:
         good_electrons.prepare(f)
-        assert good_electrons.required_index_columns == ["evtnum"]
+        assert good_electrons.required_indices == ["evtnum"]
         assert events.required_indices == ["evtnum"]
 
         column_names = good_electrons.resolve_metadata(f)

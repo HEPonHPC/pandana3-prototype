@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Set, Callable, Tuple
+from typing import List, Set, Callable, Tuple, final
 import h5py as h5
 import pandas as pd
 from pandana3.core.index import Index
@@ -15,6 +15,7 @@ class Cut(ABC):
     def __init__(self):
         self.prepared = False
 
+    @final
     def prepare(self, f: h5.File) -> None:
         """Prepare for evaluation of this Var. This should be called directly by the
         user on the Var objects used directly in an analysis.
@@ -41,6 +42,7 @@ class Cut(ABC):
         """
         raise NotImplementedError
 
+    @final
     def inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read.
 

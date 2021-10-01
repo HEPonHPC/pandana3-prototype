@@ -1,6 +1,7 @@
 import pytest
 import h5py as h5
 import pandas as pd
+from numpy import dtype
 
 from pandana3.core.var import SimpleVar
 
@@ -79,3 +80,13 @@ def test_resolve_metadata(sv00: SimpleVar, datafile: h5.File) -> None:
     available, needed = sv00.resolve_metadata(datafile)
     assert available == ["evtnum", "electrons_idx"]
     assert needed == []
+
+
+def test_eval_with_required_index(sv00: SimpleVar, datafile: h5.File) -> None:
+    sv00.set_required_indices(["evtnum"])
+    sv00.prepare(datafile)
+    df = sv00.eval(datafile)
+    assert list(df.columns) == ["pt", "eta"]
+    assert df.index is not None
+    assert df.index.name == "evtnum"
+    assert df.index.dtype == dtype("int64")
