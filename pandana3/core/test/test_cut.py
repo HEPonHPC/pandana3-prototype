@@ -27,9 +27,6 @@ def test_prepare(c00: SimpleCut, datafile: h5.File) -> None:
 
 
 def test_eval(c00: SimpleCut, datafile: h5.File) -> None:
-    assert not c00.inq_index().is_trivial  # Because we have applied a cut!
-    assert isinstance(c00.inq_index(), SimpleIndex)
-
     c00.prepare(datafile)
     assert c00.prepared
     assert c00.inq_datasets_read() == {"/electrons/pt", "/electrons/phi"}
