@@ -39,9 +39,9 @@ class Var(ABC):
 
     def __init__(self):
         """The base class Var contains the data common to all Vars:
-             prepared: the current state of the Var
-             required_indices: the names of the index columns that are required
-                  to evaluate this Var in the context in which it is used.
+        prepared: the current state of the Var
+        required_indices: the names of the index columns that are required
+             to evaluate this Var in the context in which it is used.
         """
         self.prepared = False
         self.required_indices: List[str] = []
@@ -226,25 +226,34 @@ class SimpleVar(Var):
 
     def inq_result_columns(self) -> List[str]:
         """Return the column names in the DataFrame that will be the result of
-        evaluation. For a SimpleVar, this is always the same as the columns."""
-        return self.columns
+        evaluation. For a SimpleVar, this is always the same as the columns plus
+        "rowid". """
+        return self.columns + ["rowid"]  # We do not want this to modify self.columns
 
     def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         """Evaluate the Var by reading all the required data from the given
         h5.File object.
 
+        In addition to the columns defined by the user, we will also have a "rowid"
+        column. If there is no other index, we will have a simple index based on this
+        rowid.
+
         In this first version, we have no limitation on the rows read; this
         always reads all rows."""
 
-        # TODO: Replace this dictionary comprehension by something that will raise an
-        # exception indicating which column(s) could not be found.
         try:
             all_column_names = self.columns + self.required_indices
-            data = {col_name: h5file[f"/{self.table}/{col_name}"] for col_name in all_column_names}
+            data = {
+                col_name: h5file[f"/{self.table}/{col_name}"]
+                for col_name in all_column_names
+            }
         except KeyError as k:
             raise ValueError("Unable to find requested column in HDF5 file") from k
         result = pd.DataFrame(data)
-        if len(self.required_indices) != 0:
+        result["rowid"] = np.arange(len(result))
+        if len(self.required_indices) == 0:
+            result.set_index("rowid", inplace=True, drop=False)
+        else:
             result.set_index(self.required_indices, inplace=True)
         return result
 
@@ -252,7 +261,6 @@ class SimpleVar(Var):
         """Use the specified file f to fill out the metadata that can not
         be determined until access to the file is possible.
         """
-        assert h5file, "Attempt to resolve Var metadata with a non-open File"
         index_columns = h5file[self.table].attrs["index_cols"].tolist()
         return index_columns, []
 
@@ -378,10 +386,10 @@ class FilteredVar(Var):
         self.cut = cut
 
     @staticmethod
-    def determine_required(bic: List[str], cic: List[str]) -> List[str]:
+    def determine_required(bic: List[str], cic: List[str], crc: List[str]) -> List[str]:
         """Given two lists of index column names,"""
         if bic == cic:
-            return []
+            return crc
         return common_prefix(bic, cic)
 
     def _do_prepare(self, f: h5.File) -> None:
@@ -421,21 +429,23 @@ class FilteredVar(Var):
         # the vars involved more than once each.
         tmp = self.base.eval(h5file)
         good = self.cut.eval(h5file)
-        return tmp[good]
+        survivors = tmp.loc[good]
+        if self.index_imposed != []:
+            survivors.set_index(self.index_imposed)
+        return survivors
 
     def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
         raise NotImplementedError("We don't know how to add columns to a FilteredVar")
 
     def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
-        assert h5.File, "Attempt to resolve Var metadata with a non-open File"
         base_all, _ = self.base.resolve_metadata(h5file)
-        cut_all, _ = self.cut.resolve_metadata(h5file)
+        cut_all, cut_required = self.cut.resolve_metadata(h5file)
 
         if not self.check_compatible(base_all, cut_all):
             raise ValueError("FilteredVar has incompatible index columns")
 
-        apparently_required = self.determine_required(base_all, cut_all)
+        apparently_required = self.determine_required(base_all, cut_all, cut_required)
         return base_all, apparently_required
 
     @staticmethod

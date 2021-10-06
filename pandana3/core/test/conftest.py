@@ -37,10 +37,8 @@ def fv00() -> FilteredVar:
 
 @pytest.fixture()
 def fv01() -> FilteredVar:
-    cut = SimpleCut(SimpleVar("events", ["met"]),
-                    lambda df: df["met"] > 10.0)
-    return FilteredVar(SimpleVar("electrons", ["pt", "phi"]),
-                       cut)
+    cut = SimpleCut(SimpleVar("events", ["met"]), lambda df: df["met"] > 10.0)
+    return FilteredVar(SimpleVar("electrons", ["pt", "phi"]), cut)
 
 
 @pytest.fixture()
