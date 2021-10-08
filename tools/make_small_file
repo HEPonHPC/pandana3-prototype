@@ -19,12 +19,12 @@ def make_index_array(multiplicities: np.ndarray) -> np.ndarray:
 
 
 def make_particles(
-    particle_name: str,
-    outfile: h5.File,
-    multiplicities: np.ndarray,
-    pt_scale: float,
-    eta_sd: float,
-    gen,
+        particle_name: str,
+        outfile: h5.File,
+        multiplicities: np.ndarray,
+        pt_scale: float,
+        eta_sd: float,
+        gen,
 ) -> None:
     """Generate standard particle data for the specified particle name,
     and for the specified event multiplicities.and
@@ -53,11 +53,11 @@ def make_particles(
 
 
 def make_events(
-    outfile: h5.File,
-    n_events: int,
-    electron_multiplicities: np.ndarray,
-    muon_multiplicities: np.ndarray,
-    gen: np.random.Generator,
+        outfile: h5.File,
+        n_events: int,
+        electron_multiplicities: np.ndarray,
+        muon_multiplicities: np.ndarray,
+        gen: np.random.Generator,
 ) -> None:
     new_group = outfile.create_group("events")
     new_group["evtnum"] = np.arange(n_events)
@@ -68,10 +68,10 @@ def make_events(
 
 
 def make_particle_qualities(
-    particle_name: str,
-    outfile: h5.File,
-    multiplicities: np.ndarray,
-    gen: np.random.Generator,
+        particle_name: str,
+        outfile: h5.File,
+        multiplicities: np.ndarray,
+        gen: np.random.Generator,
 ) -> None:
     tablename = f"{particle_name}_qual"
     n_total = multiplicities.sum()
@@ -88,18 +88,19 @@ def make_particle_qualities(
 
 
 def make_particle_hits(
-    particle_name: str,
-    outfile: h5.File,
-    particles_per_event: np.ndarray,
-    hits_per_particle: np.ndarray,
-    mean_energy_per_hit: float,
-    gen: np.random.Generator,
+        particle_name: str,
+        outfile: h5.File,
+        particles_per_event: np.ndarray,
+        hits_per_particle: np.ndarray,
+        mean_energy_per_hit: float,
+        gen: np.random.Generator,
 ) -> None:
     tablename = f"{particle_name}_hits"
     n_total = hits_per_particle.sum()
     hit_energies = gen.standard_gamma(mean_energy_per_hit, n_total)
     tablename = f"{particle_name}_hits"
     new_group = outfile.create_group(tablename)
+    new_group.attrs["index_cols"] = ["evtnum", f"{particle_name}_idx", "hits_idx"]
     new_group[f"{particle_name}_idx"] = numer.make_outer_indices(
         particles_per_event, hits_per_particle
     )
@@ -142,7 +143,7 @@ def make_file(outfile):
     # We want to make sure there is at least 1 hit per electron, so we add 1 to the
     # poisson generation results
     hit_multiplicities = (
-        hgen.poisson(lam=expected_hits_per_electron, size=n_electrons) + 1
+            hgen.poisson(lam=expected_hits_per_electron, size=n_electrons) + 1
     )
     make_particle_hits(
         "electrons", outfile, electron_multiplicities, hit_multiplicities, 20.0, hgen
