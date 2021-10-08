@@ -40,22 +40,22 @@ def test_check_compatible():
 
 
 def test_fv00_newly_constructed(fv00: FilteredVar, dummyfile: h5.File) -> None:
-    exercise_newly_constructed(fv00, dummyfile, {"electrons"}, ["pt", "eta"])
+    exercise_newly_constructed(fv00, dummyfile, {"electrons"}, ["pt", "eta", "rowid"])
 
 
 def test_fv01_newly_constructed(fv01: FilteredVar, dummyfile: h5.File) -> None:
-    exercise_newly_constructed(fv01, dummyfile, {"events", "electrons"}, ["pt", "phi"])
+    exercise_newly_constructed(fv01, dummyfile, {"events", "electrons"}, ["pt", "phi", "rowid"])
 
 
 def test_fv02_newly_constructed(fv02: FilteredVar, dummyfile: h5.File) -> None:
     exercise_newly_constructed(
-        fv02, dummyfile, {"events", "electrons", "electrons_qual"}, ["q1", "q2"]
+        fv02, dummyfile, {"events", "electrons", "electrons_qual"}, ["q1", "q2", "rowid"]
     )
 
 
 def test_fv03_newly_constructed(fv03: FilteredVar, dummyfile: h5.File) -> None:
     exercise_newly_constructed(
-        fv03, dummyfile, {"events", "electrons", "electrons_hits"}, ["energy"]
+        fv03, dummyfile, {"events", "electrons", "electrons_hits"}, ["energy", "rowid"]
     )
 
 
@@ -116,7 +116,7 @@ def test_fv00_evaluating(fv00: FilteredVar, datafile: h5.File) -> None:
     assert isinstance(df, pd.DataFrame)
     # TODO: Consider whether we should only be obtaining a 'pt' column in the
     # dataframe that is returned by evaluting the FilteredVar.
-    assert list(df.columns) == ["pt", "eta"]
+    assert list(df.columns) == ["pt", "eta", "rowid"]
     assert len(df) == 18
 
 
@@ -124,7 +124,7 @@ def test_fv01_evaluating(fv01: FilteredVar, datafile: h5.File) -> None:
     fv01.prepare(datafile)
     df = fv01.eval(datafile)
     assert isinstance(df, pd.DataFrame)
-    assert list(df.columns) == ["pt", "phi"]
+    assert list(df.columns) == ["pt", "phi", "rowid"]
     assert len(df) == 24
 
 

@@ -66,8 +66,7 @@ def test_eval_no_index(sv00: SimpleVar, datafile: h5.File) -> None:
     df = sv00.eval(datafile)
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["pt", "eta", "rowid"]
-    assert df.index.name == "rowid"
-    assert df.index.dtype == np.dtype("int64")
+    assert isinstance(df.index, pd.RangeIndex)
     assert np.array_equal(df.index, np.arange(29))
     assert len(df) == 29
 

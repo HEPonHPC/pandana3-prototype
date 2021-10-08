@@ -252,7 +252,12 @@ class SimpleVar(Var):
         result = pd.DataFrame(data)
         result["rowid"] = np.arange(len(result))
         if len(self.required_indices) == 0:
-            result.set_index("rowid", inplace=True, drop=False)
+            # result.set_index("rowid", inplace=True, drop=False)
+            # We want to leave the RangeIndex, rather than replace it with an
+            # integer index that just happens to have the right values. This is
+            # in the hope that RangeIndex is optimized in some manner better than
+            # the more general Index with dtype=int64
+            pass
         else:
             result.set_index(self.required_indices, inplace=True)
         return result
@@ -384,6 +389,7 @@ class FilteredVar(Var):
         assert isinstance(cut, Cut)
         self.base = base
         self.cut = cut
+        self.index_imposed = []
 
     @staticmethod
     def determine_required(bic: List[str], cic: List[str], crc: List[str]) -> List[str]:
