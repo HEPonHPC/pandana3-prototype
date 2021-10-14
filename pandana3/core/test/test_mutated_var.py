@@ -14,7 +14,7 @@ def test_mutated_var_basic():
         base, "dist", lambda df: np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
     )
     assert x is not None
-    assert x.inq_tables_read() == ["electrons"]
+    assert x.inq_tables_read() == {"electrons"}
     assert x.inq_datasets_read() == {
         "/electrons/x",
         "/electrons/y",
