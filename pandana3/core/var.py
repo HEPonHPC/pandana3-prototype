@@ -417,9 +417,7 @@ class FilteredVar(Var):
         all_datasets = set.union(
             self.base.inq_datasets_read(), self.cut.inq_datasets_read()
         )
-        # We want to remove any duplicates from the list. Note that this does not preserve
-        # order; we should not care about the order.
-        return set(all_datasets)
+        return all_datasets
 
     def inq_tables_read(self) -> Set[str]:
         """Return a set of tables read"""
