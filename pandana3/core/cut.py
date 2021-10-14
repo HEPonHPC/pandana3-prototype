@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from typing import List, Set, Callable, Tuple, final
 import h5py as h5
 import pandas as pd
-from pandana3.core.index import Index
 
 
 class Cut(ABC):
@@ -60,9 +59,6 @@ class Cut(ABC):
         """Return the names of tables that will be read by this cut."""
         raise NotImplementedError
 
-    @abstractmethod
-    def inq_index(self) -> Index:
-        raise NotImplementedError
 
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
@@ -104,12 +100,6 @@ class SimpleCut(Cut):
     def inq_tables_read(self) -> Set[str]:
         return self.base.inq_tables_read()
 
-    def inq_index(self) -> Index:
-        """The index for a SimpleCut is not trivial. It has the same type as the
-        index for the underlying Var."""
-        idx = self.base.inq_index()
-        idx.is_trivial = False
-        return idx
 
     def eval(self, f: h5.File) -> pd.Series:
         """Return a bool series."""

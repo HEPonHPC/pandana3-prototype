@@ -4,7 +4,6 @@ import pandas as pd
 import h5py as h5
 from pandana3.core.cut import SimpleCut
 from pandana3.core.var import SimpleVar
-from pandana3.core.index import SimpleIndex
 
 
 @pytest.fixture()

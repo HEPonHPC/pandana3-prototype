@@ -6,8 +6,6 @@ import pandas as pd
 import numpy as np
 from pandana3.core.var import Var, SimpleVar, FilteredVar
 from pandana3.core.cut import SimpleCut
-from pandana3.core.index import SimpleIndex
-from pandana3.core.grouping import Grouping
 
 
 def exercise_newly_constructed(

@@ -1,8 +1,6 @@
 import pytest
 from pandana3.core.var import SimpleVar, GroupedVar, Var, MutatedVar, FilteredVar
 from pandana3.core.cut import SimpleCut
-from pandana3.core.index import SimpleIndex
-from pandana3.core.grouping import Grouping
 import h5py as h5
 import pandas as pd
 import numpy as np
