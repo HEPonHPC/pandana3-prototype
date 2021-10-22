@@ -134,6 +134,15 @@ def test_fv02_evaluating(fv02: FilteredVar, datafile: h5.File) -> None:
     assert len(df) == 24
 
 
+def test_fv01_with_imposed_index(fv01: FilteredVar, datafile: h5.File) -> None:
+    fv01.index_imposed = ["rowid"]
+    fv01.prepare(datafile)
+    assert fv01.prepared
+    df = fv01.eval(datafile)
+    assert isinstance(df, pd.DataFrame)
+    assert df.index.name == "rowid"
+
+
 def test_filtered_var_incompatible_cut_and_var():
     # Should not be able to create a FilteredVar from a Cut with grouping level
     # of "electrons" and a Var with grouping level of "muons".

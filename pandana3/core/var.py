@@ -435,7 +435,7 @@ class FilteredVar(Var):
         good = self.cut.eval(h5file)
         survivors = tmp.loc[good]
         if self.index_imposed != []:
-            survivors.set_index(self.index_imposed)
+            survivors.set_index(self.index_imposed, drop=False, inplace=True)
         return survivors
 
     def add_columns(self, column_names: List[str]) -> None:
