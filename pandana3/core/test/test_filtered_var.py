@@ -21,6 +21,11 @@ def exercise_newly_constructed(
         var.eval(f)
 
 
+def exercise_inq_row_spec(var: Var, f: h5.File, expected_row_spec: List[str]) -> None:
+    row_spec = var.inq_row_spec(f)
+    assert row_spec == expected_row_spec
+
+
 def exercise_preparing(var: Var, f: h5.File, expected_datasets_read: Set[str]) -> None:
     assert not var.prepared
     var.prepare(f)
@@ -35,6 +40,22 @@ def test_check_compatible():
     assert FilteredVar.check_compatible(["a"], ["a"])
     assert not FilteredVar.check_compatible(["a"], ["b"])
     assert not FilteredVar.check_compatible(["a"], ["a", "b"])
+
+
+def test_fv00_row_spec(fv00: FilteredVar, datafile: h5.File) -> None:
+    exercise_inq_row_spec(fv00, datafile, ["evtnum", "electrons_idx"])
+
+
+def test_fv01_row_spec(fv01: FilteredVar, datafile: h5.File) -> None:
+    exercise_inq_row_spec(fv01, datafile, ["evtnum", "electrons_idx"])
+
+
+def test_fv02_row_spec(fv02: FilteredVar, datafile: h5.File) -> None:
+    exercise_inq_row_spec(fv02, datafile, ["evtnum", "electrons_idx"])
+
+
+def test_fv03_row_spec(fv03: FilteredVar, datafile: h5.File) -> None:
+    exercise_inq_row_spec(fv03, datafile, ["evtnum", "electrons_idx", "hits_idx"])
 
 
 def test_fv00_newly_constructed(fv00: FilteredVar, dummyfile: h5.File) -> None:

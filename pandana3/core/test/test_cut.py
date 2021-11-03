@@ -35,6 +35,10 @@ def test_eval(c00: SimpleCut, datafile: h5.File) -> None:
     assert sum(vals) == 4
 
 
+def test_inq_row_spec(c00: SimpleCut, datafile: h5.File) -> None:
+    assert c00.inq_row_spec(datafile) == ["evtnum", "electrons_idx"]
+
+
 def test_resolve_metadata(c00: SimpleCut, datafile: h5.File) -> None:
     c00.prepare(datafile)
     available, needed = c00.resolve_metadata(datafile)

@@ -42,6 +42,7 @@ def test_sv00_newly_constructed(sv00: SimpleVar, dummyfile: h5.File) -> None:
     assert not sv00.prepared
     assert sv00.inq_tables_read() == {"electrons"}
     assert sv00.inq_result_columns() == ["pt", "eta", "rowid"]
+    # Make sure we can't eval an unprepared SimpleVar.
     with pytest.raises(AssertionError):
         sv00.eval(dummyfile)
 
@@ -54,6 +55,14 @@ def test_newly_constructed_datasets_read(sv00: SimpleVar) -> None:
 def test_prepare_sets_state(sv00: SimpleVar, datafile: h5.File) -> None:
     sv00.prepare(datafile)
     assert sv00.prepared
+
+
+def test_inq_row_spec(sv00: SimpleVar, sv01: SimpleVar, sv02: SimpleVar,
+                      sv03: SimpleVar, datafile: h5.File) -> None:
+    assert sv00.inq_row_spec(datafile) == ["evtnum", "electrons_idx"]
+    assert sv01.inq_row_spec(datafile) == ["evtnum"]
+    assert sv02.inq_row_spec(datafile) == ["evtnum", "electrons_idx"]
+    assert sv03.inq_row_spec(datafile) == ["evtnum", "electrons_idx", "hits_idx"]
 
 
 def test_datasets_read(sv00: SimpleVar, datafile: h5.File) -> None:

@@ -46,6 +46,11 @@ class Var(ABC):
         self.prepared = False
         self.required_indices: List[str] = []
 
+    # @abstractmethod
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        """"Determine the row specification for this Var."""
+        raise NotImplementedError
+
     @final
     def prepare(self, f: h5.File) -> None:
         """Prepare for evaluation of this Var. This should be called directly by the
@@ -151,6 +156,9 @@ class ConstantVar(Var):
         self.col_name = name
         self.value = value
 
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        return []
+
     def _do_prepare(self, f: h5.File) -> None:
         """ConstantVar has no preparation to do."""
         pass
@@ -202,6 +210,12 @@ class SimpleVar(Var):
         super().__init__()
         self.table = table_name
         self.columns = column_names
+        self.row_spec: List[str] = []
+
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        if not self.row_spec:
+            self.row_spec = f[self.table].attrs["index_cols"].tolist()
+        return self.row_spec
 
     def _do_prepare(self, f: h5.File) -> None:
         """A SimpleVar has no extra preparation to do."""
@@ -300,6 +314,9 @@ class GroupedVar(Var):
         self.grouping = grouping
         self.reduction = reduction
 
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        super().inq_row_spec()
+
     def _do_prepare(self, f: h5.File) -> None:
         return super().prepare(f)
 
@@ -351,6 +368,9 @@ class MutatedVar(Var):
         self.name = name
         self.mutate = mutation
 
+    def inq_row_spec(self, f: h5.File) -> None:
+        return self.var.inq_row_spec(f)
+
     def _do_prepare(self, f: h5.File) -> None:
         return super().prepare(f)
 
@@ -398,6 +418,9 @@ class FilteredVar(Var):
             return crc
         return common_prefix(bic, cic)
 
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        return self.base.inq_row_spec(f)
+
     def _do_prepare(self, f: h5.File) -> None:
         _, self.required_indices = self.resolve_metadata(f)
         self.base.set_required_indices(self.required_indices)
@@ -428,11 +451,13 @@ class FilteredVar(Var):
         evaluation."""
         return self.base.inq_result_columns()
 
-    def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
+    def _do_eval(self, f: h5.File) -> pd.DataFrame:
         # TODO: Optimize this so that we don't evaluate
         # the vars involved more than once each.
-        tmp = self.base.eval(h5file)
-        good = self.cut.eval(h5file)
+        tmp = self.base.eval(f)
+        tmp_row_spec = self.base.inq_row_spec(f)
+        good = self.cut.eval(f)
+        good_row_spec = self.cut.inq_row_spec(f)
         survivors = tmp.loc[good]
         if self.index_imposed != []:
             survivors.set_index(self.index_imposed, drop=False, inplace=True)

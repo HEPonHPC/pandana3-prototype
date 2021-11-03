@@ -14,6 +14,11 @@ class Cut(ABC):
     def __init__(self):
         self.prepared = False
 
+    # @abstractmethod
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        """"Determine the row specification for this Cut."""
+        raise NotImplementedError
+
     @final
     def prepare(self, f: h5.File) -> None:
         """Prepare for evaluation of this Var. This should be called directly by the
@@ -59,7 +64,6 @@ class Cut(ABC):
         """Return the names of tables that will be read by this cut."""
         raise NotImplementedError
 
-
     @abstractmethod
     def resolve_metadata(self, h5file: h5.File) -> Tuple[List[str], List[str]]:
         return [], []
@@ -86,6 +90,9 @@ class SimpleCut(Cut):
         self.base: Var = base
         self.predicate = predicate
 
+    def inq_row_spec(self, f: h5.File) -> List[str]:
+        return self.base.inq_row_spec(f)
+
     def _do_prepare(self, f: h5.File) -> None:
         self.base.prepare(f)
 
@@ -99,7 +106,6 @@ class SimpleCut(Cut):
 
     def inq_tables_read(self) -> Set[str]:
         return self.base.inq_tables_read()
-
 
     def eval(self, f: h5.File) -> pd.Series:
         """Return a bool series."""

@@ -29,6 +29,21 @@ def sv00() -> SimpleVar:
 
 
 @pytest.fixture()
+def sv01() -> SimpleVar:
+    return SimpleVar("events", ["met"])
+
+
+@pytest.fixture()
+def sv02() -> SimpleVar:
+    return SimpleVar("electrons_qual", ["q1", "q2"])
+
+
+@pytest.fixture()
+def sv03() -> SimpleVar:
+    return SimpleVar("electrons_hits", ["energy"])
+
+
+@pytest.fixture()
 def fv00() -> FilteredVar:
     base = SimpleVar("electrons", ["pt", "eta"])
     cut = SimpleCut(base, lambda ele: np.abs(ele.eta) < 1.5)

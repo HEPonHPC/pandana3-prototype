@@ -109,7 +109,7 @@ def make_particle_hits(
     hits_per_event = [sum(numer.take(npart, hpp_gen)[0]) for npart in particles_per_event]
 
     new_group["evtnum"] = numer.repeated_indices(hits_per_event)
-    new_group["hit_idx"] = numer.flattened_ranges(hits_per_particle)
+    new_group["hits_idx"] = numer.flattened_ranges(hits_per_particle)
     new_group["energy"] = hit_energies
 
     particle_group = outfile[f"{particle_name}"]
