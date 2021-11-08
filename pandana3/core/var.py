@@ -315,7 +315,7 @@ class GroupedVar(Var):
         self.reduction = reduction
 
     def inq_row_spec(self, f: h5.File) -> List[str]:
-        super().inq_row_spec()
+        return self.grouping
 
     def _do_prepare(self, f: h5.File) -> None:
         return super().prepare(f)
