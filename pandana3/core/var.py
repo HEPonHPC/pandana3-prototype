@@ -210,12 +210,9 @@ class SimpleVar(Var):
         super().__init__()
         self.table = table_name
         self.columns = column_names
-        self.row_spec: List[str] = []
 
     def inq_row_spec(self, f: h5.File) -> List[str]:
-        if not self.row_spec:
-            self.row_spec = f[self.table].attrs["index_cols"].tolist()
-        return self.row_spec
+        return f[self.table].attrs["index_cols"].tolist()
 
     def _do_prepare(self, f: h5.File) -> None:
         """A SimpleVar has no extra preparation to do."""
@@ -227,7 +224,8 @@ class SimpleVar(Var):
 
     def _do_inq_datasets_read(self) -> Set[str]:
         """Return the (full) names of the datasets to be read."""
-        physics_datasets = {f"/{self.table}/{col_name}" for col_name in self.columns}
+        physics_datasets = {f"/{self.table}/{col_name}" for col_name in
+                            self.columns}
         index_datasets = {
             f"/{self.table}/{col_name}" for col_name in self.required_indices
         }
@@ -242,7 +240,8 @@ class SimpleVar(Var):
         """Return the column names in the DataFrame that will be the result of
         evaluation. For a SimpleVar, this is always the same as the columns plus
         "rowid". """
-        return self.columns + ["rowid"]  # We do not want this to modify self.columns
+        return self.columns + [
+            "rowid"]  # We do not want this to modify self.columns
 
     def _do_eval(self, h5file: h5.File) -> pd.DataFrame:
         """Evaluate the Var by reading all the required data from the given
@@ -262,7 +261,8 @@ class SimpleVar(Var):
                 for col_name in all_column_names
             }
         except KeyError as k:
-            raise ValueError("Unable to find requested column in HDF5 file") from k
+            raise ValueError(
+                "Unable to find requested column in HDF5 file") from k
         result = pd.DataFrame(data)
         result["rowid"] = np.arange(len(result))
         if len(self.required_indices) == 0:
@@ -361,7 +361,8 @@ class MutatedVar(Var):
     """
 
     def __init__(
-            self, var: Var, name: str, mutation: Callable[[pd.DataFrame], pd.DataFrame]
+            self, var: Var, name: str,
+            mutation: Callable[[pd.DataFrame], pd.DataFrame]
     ):
         super().__init__()
         self.var = var
@@ -409,10 +410,10 @@ class FilteredVar(Var):
         assert isinstance(cut, Cut)
         self.base = base
         self.cut = cut
-        self.index_imposed = []
 
     @staticmethod
-    def determine_required(bic: List[str], cic: List[str], crc: List[str]) -> List[str]:
+    def determine_required(bic: List[str], cic: List[str], crc: List[str]) -> \
+            List[str]:
         """Given two lists of index column names,"""
         if bic == cic:
             return crc
@@ -465,7 +466,8 @@ class FilteredVar(Var):
 
     def add_columns(self, column_names: List[str]) -> None:
         """Add a new columns to be read."""
-        raise NotImplementedError("We don't know how to add columns to a FilteredVar")
+        raise NotImplementedError(
+            "We don't know how to add columns to a FilteredVar")
 
     def resolve_metadata(self, h5file: h5.File) -> IndexInfoType:
         base_all, _ = self.base.resolve_metadata(h5file)
@@ -474,7 +476,8 @@ class FilteredVar(Var):
         if not self.check_compatible(base_all, cut_all):
             raise ValueError("FilteredVar has incompatible index columns")
 
-        apparently_required = self.determine_required(base_all, cut_all, cut_required)
+        apparently_required = self.determine_required(base_all, cut_all,
+                                                      cut_required)
         return base_all, apparently_required
 
     @staticmethod
